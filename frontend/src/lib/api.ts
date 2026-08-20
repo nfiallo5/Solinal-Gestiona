@@ -301,6 +301,19 @@ export const authApi = {
     });
   },
 
+  /**
+   * Public self-service signup: just an email and a password. The server
+   * derives a display name and defaults the role to `Lector`. Responds like
+   * `login()` so the caller can sign the new account straight in.
+   */
+  async register(input: { email: string; password: string }): Promise<LoginResult> {
+    return request<LoginResult>("/auth/register", {
+      method: "POST",
+      body: input,
+      anonymous: true,
+    });
+  },
+
   /** Session rehydration on page load — unwraps `{ user }`. */
   async me(): Promise<ApiUser> {
     const data = await request<{ user: ApiUser }>("/auth/me");

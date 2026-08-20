@@ -39,6 +39,9 @@ function auditSince(since: number, contains: string) {
   });
 }
 
+/** Emails owned by the `/auth/register` suite, cleaned up at the end. */
+const REGISTER_EMAIL_PREFIX = 'registertest-';
+
 beforeAll(async () => {
   await resetLockout(ADMIN.email);
   await resetLockout(VICTIM.email);
@@ -47,7 +50,83 @@ beforeAll(async () => {
 afterAll(async () => {
   await resetLockout(ADMIN.email);
   await resetLockout(VICTIM.email);
+  await prisma.user.deleteMany({ where: { email: { startsWith: REGISTER_EMAIL_PREFIX } } });
   await disconnectPrisma();
+});
+
+describe('POST /auth/register', () => {
+  it('creates a Lector account from just an email + password and signs it in', async () => {
+    const email = `${REGISTER_EMAIL_PREFIX}ana.perez@example.com`;
+    const res = await request(app)
+      .post('/auth/register')
+      .send({ email, password: 'Contrasena123' });
+
+    expect(res.status).toBe(201);
+    expect(typeof res.body.token).toBe('string');
+    expect(res.body.user.email).toBe(email);
+    expect(res.body.user.name).toBe('Registertest Ana Perez');
+    expect(res.body.user.role).toBe('Lector');
+    expect(res.body.user).not.toHaveProperty('passwordHash');
+
+    // The token works immediately.
+    const me = await request(app).get('/auth/me').set('Authorization', `Bearer ${res.body.token}`);
+    expect(me.status).toBe(200);
+    expect(me.body.user.email).toBe(email);
+  });
+
+  it('is case-insensitive on the email and lowercases it', async () => {
+    const email = `${REGISTER_EMAIL_PREFIX}Mixed.Case@Example.com`;
+    const res = await request(app)
+      .post('/auth/register')
+      .send({ email, password: 'Contrasena123' });
+    expect(res.status).toBe(201);
+    expect(res.body.user.email).toBe(email.toLowerCase());
+  });
+
+  it('disambiguates a display-name collision with a numeric suffix', async () => {
+    // Both local parts normalize (separators -> spaces) to the same name.
+    const first = await request(app)
+      .post('/auth/register')
+      .send({ email: `${REGISTER_EMAIL_PREFIX}name.collision@example.com`, password: 'Contrasena123' });
+    const second = await request(app)
+      .post('/auth/register')
+      .send({ email: `${REGISTER_EMAIL_PREFIX}name_collision@example.com`, password: 'Contrasena123' });
+
+    expect(first.body.user.name).toBe('Registertest Name Collision');
+    expect(second.body.user.name).toBe('Registertest Name Collision 2');
+  });
+
+  it('rejects a duplicate email with 409', async () => {
+    const email = `${REGISTER_EMAIL_PREFIX}dupemail@example.com`;
+    await request(app).post('/auth/register').send({ email, password: 'Contrasena123' });
+    const res = await request(app).post('/auth/register').send({ email, password: 'Contrasena123' });
+    expect(res.status).toBe(409);
+  });
+
+  it('enforces the org password policy', async () => {
+    const res = await request(app)
+      .post('/auth/register')
+      .send({ email: `${REGISTER_EMAIL_PREFIX}weakpw@example.com`, password: '123' });
+    expect(res.status).toBe(422);
+  });
+
+  it('400s a malformed body', async () => {
+    const res = await request(app).post('/auth/register').send({ email: 'not-an-email' });
+    expect(res.status).toBe(400);
+  });
+
+  it('writes an audit entry on success', async () => {
+    const since = await auditWatermark();
+    const email = `${REGISTER_EMAIL_PREFIX}audited@example.com`;
+    const res = await request(app)
+      .post('/auth/register')
+      .send({ email, password: 'Contrasena123' });
+
+    const entry = await auditSince(since, 'Se registró un nuevo usuario');
+    expect(entry).not.toBeNull();
+    expect(entry?.action).toContain(res.body.user.name);
+    expect(entry?.role).toBe('Lector');
+  });
 });
 
 describe('POST /auth/login', () => {

@@ -6,6 +6,7 @@
  * list of 5 plaintext demo logins) with a bcrypt check against `User`.
  *
  * ── Routes ─────────────────────────────────────────────────────────────────
+ *   POST /auth/register public      { email, password } -> { token, user }
  *   POST /auth/login    public      { email, password } -> { token, user }
  *   POST /auth/logout   requireAuth audited no-op -> { ok: true }
  *   GET  /auth/me       requireAuth -> { user }
@@ -37,6 +38,7 @@ import { signToken } from '../lib/jwt.js';
 import { clientIp, writeAudit, type DbClient } from '../lib/audit.js';
 import { isLockActive, lockRemainingMs } from '../lib/lockout.js';
 import { serializeUser } from '../lib/serialize.js';
+import { assertPasswordPolicy, BCRYPT_ROUNDS, initialsOf } from '../lib/userAccount.js';
 import { asyncHandler, HttpError } from '../middleware/error.js';
 import { getAuthUser, requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -104,6 +106,100 @@ export function requireRoleAudited(
 export function requireAdmin(describe: (req: Request) => string) {
   return requireRoleAudited(['Administrador'], describe);
 }
+
+// ---------------------------------------------------------------------------
+// POST /auth/register
+// ---------------------------------------------------------------------------
+
+/**
+ * Public self-service signup: just an email and a password. Everything else
+ * `POST /users` collects (`name`, `role`, `status`, `notes`) is either
+ * derived or defaulted here, since there is no admin in the loop:
+ *   - `name` is derived from the email's local part (before the `@`), and
+ *     `short` from that via `initialsOf()`, same as the admin-created path.
+ *   - `role` is always `Lector` — the least-privileged role. An
+ *     administrator can promote the account afterwards via
+ *     `PATCH /users/:id/role`, same as any other user.
+ * Responds exactly like `POST /auth/login` ( `{ token, user }` ) so the
+ * frontend can sign the new account straight in.
+ */
+const zRegisterBody = z.object({
+  email: z.string().trim().toLowerCase().email('Correo electrónico inválido.'),
+  password: z.string().min(1, 'La contraseña es obligatoria.').max(200),
+});
+
+/**
+ * `User.name` is `@unique` (the frontend identifies users by name). Derive a
+ * readable display name from the email's local part, then disambiguate with
+ * a numeric suffix on collision instead of failing the whole signup.
+ */
+async function uniqueNameFromEmail(email: string): Promise<string> {
+  const local = email.split('@')[0] ?? email;
+  const base =
+    local
+      .replace(/[._+-]+/g, ' ')
+      .trim()
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => (w[0] as string).toUpperCase() + w.slice(1))
+      .join(' ') || 'Usuario';
+
+  let candidate = base;
+  let suffix = 2;
+  while (
+    await prisma.user.findFirst({ where: { name: { equals: candidate, mode: 'insensitive' } } })
+  ) {
+    candidate = `${base} ${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+authRouter.post(
+  '/register',
+  validate({ body: zRegisterBody }),
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body as z.infer<typeof zRegisterBody>;
+
+    const [emailClash, config] = await Promise.all([
+      prisma.user.findUnique({ where: { email } }),
+      prisma.orgConfig.findFirst(),
+    ]);
+    if (emailClash) throw HttpError.conflict('Ya existe una cuenta registrada con ese correo.');
+
+    const policy = config?.passwordPolicy ?? 'strong';
+    assertPasswordPolicy(password, policy);
+
+    const name = await uniqueNameFromEmail(email);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+    const created = await prisma.$transaction(async (tx) => {
+      const row = await tx.user.create({
+        data: {
+          name,
+          short: initialsOf(name),
+          email,
+          role: 'Lector',
+          passwordHash,
+        },
+      });
+      await writeAudit(req, `Se registró un nuevo usuario: ${row.name} (${row.role})`, {
+        actor: { user: row.name, role: row.role },
+        tx,
+      });
+      return row;
+    });
+
+    const token = signToken({
+      sub: created.id,
+      email: created.email,
+      name: created.name,
+      role: created.role,
+    });
+
+    res.status(201).json({ token, user: serializeUser(created) });
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // POST /auth/login

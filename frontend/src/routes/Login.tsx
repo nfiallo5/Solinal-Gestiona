@@ -78,8 +78,10 @@ export default function LoginPage() {
   const { state, signIn } = useAppState();
   const navigate = useNavigate();
 
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [lockedSeconds, setLockedSeconds] = useState<number | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -113,6 +115,18 @@ export default function LoginPage() {
     },
   });
 
+  const registerMutation = useMutation({
+    mutationFn: (input: { email: string; password: string }) => authApi.register(input),
+    onSuccess: (result: LoginResult) => {
+      signIn(result.token, result.user);
+      toast.success(`Cuenta creada. Bienvenido, ${result.user.name}.`);
+      navigate("/", { replace: true });
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "No se pudo crear la cuenta.");
+    },
+  });
+
   if (state.session.isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -127,6 +141,18 @@ export default function LoginPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === "register") {
+      if (!email.trim() || !password) {
+        toast.error("Ingresa tu correo y contraseña para continuar.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast.error("Las contraseñas no coinciden.");
+        return;
+      }
+      registerMutation.mutate({ email: email.trim(), password });
+      return;
+    }
     submitCredentials(email, password, "credenciales");
   }
 
@@ -137,9 +163,17 @@ export default function LoginPage() {
     submitCredentials(account.email, account.password, "acceso rápido");
   }
 
+  function toggleMode() {
+    setMode((m) => (m === "login" ? "register" : "login"));
+    setPassword("");
+    setConfirmPassword("");
+  }
+
   function handleUnavailable(label: string) {
     toast.info(`${label}: función simulada, no disponible en este MVP.`);
   }
+
+  const isPending = loginMutation.isPending || registerMutation.isPending;
 
   return (
     <div className="grid min-h-svh grid-cols-1 lg:grid-cols-2">
@@ -175,10 +209,16 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-primary">Acceso</p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight">Iniciar sesión.</h2>
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">
+              {mode === "login" ? "Acceso" : "Nueva cuenta"}
+            </p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight">
+              {mode === "login" ? "Iniciar sesión." : "Crear cuenta."}
+            </h2>
             <p className="mt-1 text-sm text-navy-foreground/60">
-              Ingresa con tu cuenta para continuar.
+              {mode === "login"
+                ? "Ingresa con tu cuenta para continuar."
+                : "Solo necesitas un correo y una contraseña."}
             </p>
           </div>
 
@@ -221,17 +261,39 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              className="mt-1 font-bold"
-              disabled={loginMutation.isPending}
-            >
-              Iniciar sesión
+            {mode === "register" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="login-confirm-password" className="text-navy-foreground/80">
+                  Confirmar contraseña
+                </Label>
+                <Input
+                  id="login-confirm-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Repite tu contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="border-white/15 bg-white/5 text-navy-foreground placeholder:text-navy-foreground/40"
+                />
+              </div>
+            )}
+
+            <Button type="submit" size="lg" className="mt-1 font-bold" disabled={isPending}>
+              {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
             </Button>
           </form>
 
+          <p className="text-center text-sm text-navy-foreground/60">
+            {mode === "login" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+            <button
+              type="button"
+              onClick={toggleMode}
+              className="font-semibold text-primary hover:underline"
+            >
+              {mode === "login" ? "Regístrate" : "Inicia sesión"}
+            </button>
+          </p>
 
+          {mode === "login" && (
           <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3">
             <p className="text-center text-xs text-navy-foreground/50">
               Demo — un usuario de prueba dedicado por cada rol. Un clic inicia sesión.
@@ -241,7 +303,7 @@ export default function LoginPage() {
                 <button
                   key={account.role}
                   type="button"
-                  disabled={loginMutation.isPending}
+                  disabled={isPending}
                   onClick={() => handleQuickLogin(account)}
                   className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/10 disabled:opacity-60"
                 >
@@ -258,6 +320,7 @@ export default function LoginPage() {
               ))}
             </div>
           </div>
+          )}
 
         </div>
       </div>
