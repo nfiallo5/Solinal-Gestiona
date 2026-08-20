@@ -24,6 +24,7 @@ import {
 import type { DocumentComment, RoleName, SolinalDocument } from "@/data/seed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { documentTypeAbbr, statusLabel } from "@/features/documents/docStyles";
 import { CommentsThread } from "./CommentsThread";
 import { LockedSection } from "./LockedSection";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -190,25 +191,85 @@ export function ContentEditor({
           </span>
         </div>
 
-        <div
-          ref={bodyRef}
-          contentEditable={!readOnly}
-          suppressContentEditableWarning
-          spellCheck={false}
-          onInput={handleInput}
-          className="min-h-[360px] bg-background p-4.5 leading-relaxed focus:outline-none
-            [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:first:mt-0
-            [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold
-            [&_h3]:mb-1.5 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-bold
-            [&_p]:mb-2.5 [&_p]:last:mb-0
-            [&_ul]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-5
-            [&_ol]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-5
-            [&_li]:mb-1
-            [&_strong]:font-bold
-            [&_table]:my-2.5 [&_table]:w-full [&_table]:border-collapse
-            [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:p-1.5 [&_th]:text-left [&_th]:text-xs
-            [&_td]:border [&_td]:border-border [&_td]:p-1.5 [&_td]:text-xs"
-        />
+        {/* Page backdrop + sheet — same header/body/footer structure as the
+            "Documento de ejemplo" preview in Control Documental (Encabezado
+            / cuerpo / PieDocumento), populated with this document's real
+            fields instead of the preview's placeholder data. Fills the tab
+            instead of being a small fixed-height box. */}
+        <div className="bg-muted/40 p-4 sm:p-8">
+          <div className="mx-auto w-full max-w-[850px] bg-white shadow-lg">
+            {/* Letterhead — mirrors ControlDocumental's default "tripartito" Encabezado. */}
+            <table className="w-full border-collapse text-[11px] text-neutral-900">
+              <tbody>
+                <tr>
+                  <td
+                    rowSpan={2}
+                    className="w-[92px] border border-neutral-800 p-2 text-center align-middle"
+                  >
+                    <div className="mx-auto flex size-11 items-center justify-center rounded-md bg-navy text-xs font-bold text-navy-foreground">
+                      {documentTypeAbbr[doc.type]}
+                    </div>
+                  </td>
+                  <td rowSpan={2} className="border border-neutral-800 p-2.5 align-middle">
+                    <div className="font-mono text-[10.5px] text-neutral-600">{doc.code}</div>
+                    <div className="mt-1 text-[13px] font-bold">{doc.title.toUpperCase()}</div>
+                    <div className="mt-1 text-[10px] font-normal text-neutral-600">
+                      {doc.type} · {doc.norma}
+                    </div>
+                  </td>
+                  <td className="w-[150px] border border-neutral-800 p-2 align-middle">
+                    <span className="font-bold">Versión:</span> {doc.version}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border border-neutral-800 p-2 align-middle">
+                    <span className="font-bold">Estado:</span> {statusLabel(doc.estado, doc.vencido)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div
+              ref={bodyRef}
+              contentEditable={!readOnly}
+              suppressContentEditableWarning
+              spellCheck={false}
+              onInput={handleInput}
+              className="min-h-[65vh] bg-white p-8 leading-relaxed focus:outline-none sm:p-12
+                [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:first:mt-0
+                [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold
+                [&_h3]:mb-1.5 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-bold
+                [&_p]:mb-2.5 [&_p]:last:mb-0
+                [&_ul]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-5
+                [&_ol]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-5
+                [&_li]:mb-1
+                [&_strong]:font-bold
+                [&_table]:my-2.5 [&_table]:w-full [&_table]:border-collapse
+                [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:p-1.5 [&_th]:text-left [&_th]:text-xs
+                [&_td]:border [&_td]:border-border [&_td]:p-1.5 [&_td]:text-xs"
+            />
+
+            {/* Firma strip — mirrors ControlDocumental's default "firmasTabla"
+                PieDocumento, with real elaborador/estado/firmas instead of
+                the preview's fixed sample names. */}
+            <table className="w-full border-collapse text-[11px] text-neutral-900">
+              <tbody>
+                <tr>
+                  <td className="w-1/3 border border-neutral-800 p-2 font-bold">Elaboró</td>
+                  <td className="w-1/3 border border-neutral-800 p-2 font-bold">Estado</td>
+                  <td className="w-1/3 border border-neutral-800 p-2 font-bold">Firmas registradas</td>
+                </tr>
+                <tr>
+                  <td className="border border-neutral-800 p-2">{doc.creador}</td>
+                  <td className="border border-neutral-800 p-2">{statusLabel(doc.estado, doc.vencido)}</td>
+                  <td className="border border-neutral-800 p-2">
+                    {doc.signatures.length > 0 ? doc.signatures.join(", ") : "Pendiente"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <CommentsThread comments={comments} canComment={canComment} onAddComment={onAddComment} />
