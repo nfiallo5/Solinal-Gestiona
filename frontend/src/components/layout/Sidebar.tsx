@@ -49,6 +49,8 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   /** Legacy page id (window.pages), kept for role-restriction parity. */
   legacyPage: string;
+  /** Hidden from every role except Administrador (stricter than `lectorRestricted`). */
+  adminOnly?: boolean;
 }
 
 const nav: NavItem[] = [
@@ -72,6 +74,7 @@ const nav: NavItem[] = [
     to: "/control-documental",
     icon: ClipboardCheck,
     legacyPage: "control-documental",
+    adminOnly: true,
   },
   {
     label: "Audit Trail",
@@ -94,7 +97,7 @@ const nav: NavItem[] = [
 ];
 
 /** Pages the "Lector" role cannot access (legacy js/navigation.js). */
-const lectorRestricted = new Set(["edit", "templates", "audit", "config", "control-documental"]);
+const lectorRestricted = new Set(["edit", "templates", "audit", "config"]);
 
 const COLLAPSED_STORAGE_KEY = "solinal-gestiona:sidebar-collapsed";
 
@@ -110,6 +113,7 @@ export function Sidebar() {
   const { state, signOut } = useAppState();
   const navigate = useNavigate();
   const isLector = state.session.activeRole === "Lector";
+  const isAdmin = state.session.activeRole === "Administrador";
   const documentsQuery = useDocuments();
   const docCount = documentsQuery.data?.length ?? 0;
   const [collapsed, setCollapsed] = useState(loadCollapsed);
@@ -182,8 +186,9 @@ export function Sidebar() {
         <div className="my-4 border-t border-sidebar-border" />
 
         <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto">
-          {nav.map(({ label, to, icon: Icon, legacyPage }) => {
+          {nav.map(({ label, to, icon: Icon, legacyPage, adminOnly }) => {
             if (isLector && lectorRestricted.has(legacyPage)) return null;
+            if (adminOnly && !isAdmin) return null;
             const link = (
               <NavLink
                 key={to}

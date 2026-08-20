@@ -1101,18 +1101,19 @@ export default function ControlDocumental() {
 
   const setSecs = (v) => up(`estructuras.${tipoSel}`, v);
 
-  // El rol Lector no administra el motor documental. El Sidebar ya oculta
-  // el link, pero esto cubre navegación directa / cambio de rol estando ya
-  // en la página, igual que en Plantillas.tsx/Auditoria.tsx/Configuracion.tsx.
-  if (state.session.activeRole === "Lector") {
+  // Solo el Administrador configura el motor documental -- no solo el
+  // Lector. El Sidebar ya oculta el link para todo el resto, pero esto
+  // cubre navegación directa / cambio de rol estando ya en la página,
+  // igual que en Plantillas.tsx/Auditoria.tsx/Configuracion.tsx.
+  if (state.session.activeRole !== "Administrador") {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
           <ShieldAlert className="size-8 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">Acceso restringido</p>
           <p className="max-w-sm text-xs text-muted-foreground">
-            El rol Lector no tiene permisos para configurar el motor de control
-            documental. Esta vista está reservada a roles con permisos de gestión.
+            El Control Documental está reservado al rol Administrador. Contacta
+            a un administrador si necesitas cambios en el motor documental.
           </p>
         </CardContent>
       </Card>
@@ -1325,105 +1326,84 @@ export default function ControlDocumental() {
 
         {/* ============ 02 TIPOS Y CODIFICACIÓN ============ */}
         {tab === "tipos" && (
-          <div className="cdgrid">
-            <div>
-              <div className="card">
-                <span className="eyebrow">7.5.2 a) identificación</span>
-                <h3>Regla de codificación</h3>
-                <p className="hint">Ordena los bloques del código. El correlativo es automático por tipo y proceso, y nunca se reutiliza.</p>
-                <div className="tokens">
-                  {cfg.cod.tokens.map((t, i) => (
-                    <span className="token" key={t}>
-                      <button className="mv" onClick={() => { const a = [...cfg.cod.tokens]; if (i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; up("cod.tokens", a); } }} aria-label="Mover">←</button>
-                      {TOKENS[t].label}
-                      <button className="mv" onClick={() => { const a = [...cfg.cod.tokens]; if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; up("cod.tokens", a); } }} aria-label="Mover">→</button>
-                      <button className="del" onClick={() => up("cod.tokens", cfg.cod.tokens.filter((x) => x !== t))} aria-label="Quitar">×</button>
-                    </span>
-                  ))}
-                  {cfg.cod.tokens.length === 0 && <small style={{ color: "#6B7C93" }}>Agrega al menos un bloque.</small>}
-                </div>
-                <div className="chipbar">
-                  {Object.entries(TOKENS).map(([k, v]) => (
-                    <button className="chip" key={k} disabled={cfg.cod.tokens.includes(k)} onClick={() => up("cod.tokens", [...cfg.cod.tokens, k])}>+ {v.label}</button>
-                  ))}
-                </div>
-                <div className="row2" style={{ marginTop: 16 }}>
-                  <Field label="Separador">
-                    <select className="sel" value={cfg.cod.separador} onChange={(e) => up("cod.separador", e.target.value)}>
-                      <option value="-">Guion · PRO-CAL-001-V03</option>
-                      <option value=".">Punto · PRO.CAL.001</option>
-                      <option value=":">Dos puntos · PO:GC:001</option>
-                      <option value="_">Guion bajo · PRO_CAL_001</option>
-                      <option value="ninguno">Sin separador · PROCAL001</option>
-                    </select>
-                  </Field>
+          <>
+            <div className="card">
+              <span className="eyebrow">7.5.2 a) identificación</span>
+              <h3>Regla de codificación</h3>
+              <p className="hint">Ordena los bloques del código. El correlativo es automático por tipo y proceso, y nunca se reutiliza.</p>
+              <div className="tokens">
+                {cfg.cod.tokens.map((t, i) => (
+                  <span className="token" key={t}>
+                    <button className="mv" onClick={() => { const a = [...cfg.cod.tokens]; if (i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; up("cod.tokens", a); } }} aria-label="Mover">←</button>
+                    {TOKENS[t].label}
+                    <button className="mv" onClick={() => { const a = [...cfg.cod.tokens]; if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; up("cod.tokens", a); } }} aria-label="Mover">→</button>
+                    <button className="del" onClick={() => up("cod.tokens", cfg.cod.tokens.filter((x) => x !== t))} aria-label="Quitar">×</button>
+                  </span>
+                ))}
+                {cfg.cod.tokens.length === 0 && <small style={{ color: "#6B7C93" }}>Agrega al menos un bloque.</small>}
+              </div>
+              <div className="chipbar">
+                {Object.entries(TOKENS).map(([k, v]) => (
+                  <button className="chip" key={k} disabled={cfg.cod.tokens.includes(k)} onClick={() => up("cod.tokens", [...cfg.cod.tokens, k])}>+ {v.label}</button>
+                ))}
+              </div>
+              <div className="row2" style={{ marginTop: 16 }}>
+                <Field label="Separador">
+                  <select className="sel" value={cfg.cod.separador} onChange={(e) => up("cod.separador", e.target.value)}>
+                    <option value="-">Guion · PRO-CAL-001-V03</option>
+                    <option value=".">Punto · PRO.CAL.001</option>
+                    <option value=":">Dos puntos · PO:GC:001</option>
+                    <option value="_">Guion bajo · PRO_CAL_001</option>
+                    <option value="ninguno">Sin separador · PROCAL001</option>
+                  </select>
+                </Field>
+                {/* Solo tiene sentido elegir un prefijo de versión si VERSION
+                    sigue siendo parte del código -- se oculta al quitarla. */}
+                {cfg.cod.tokens.includes("VERSION") && (
                   <Field label="Prefijo de versión en el código">
                     <select className="sel" value={cfg.cod.prefijoVer} onChange={(e) => up("cod.prefijoVer", e.target.value)}>
                       {["V", "R", "Rev.", ""].map((p) => <option key={p} value={p}>{p === "" ? "Sin prefijo · 03" : `${p} · ${p}03`}</option>)}
                     </select>
                   </Field>
-                </div>
+                )}
+              </div>
+              {/* Igual: los dígitos del correlativo no aplican si CORRELATIVO
+                  no está en el código. */}
+              {cfg.cod.tokens.includes("CORRELATIVO") && (
                 <Field label="Dígitos del correlativo" hint="Cada tipo documental puede sobrescribir este valor en la tabla siguiente.">
                   <select className="sel" value={cfg.cod.digitos} onChange={(e) => up("cod.digitos", Number(e.target.value))}>
                     {[2, 3, 4].map((d) => <option key={d} value={d}>{d} dígitos · {"1".padStart(d, "0")}</option>)}
                   </select>
                 </Field>
-                <div className="result">
-                  <small>Código generado</small>
-                  <b>{buildCode(cfg) || "—"}</b>
-                  <div style={{ fontSize: 11.5, color: "#C7D9EA", marginTop: 10, fontFamily: "'IBM Plex Mono',monospace" }}>
-                    {joinCode(cfg, ["INS", "PRD", "014", cfg.cod.prefijoVer + "02"])} · {joinCode(cfg, ["FOR", "CAL", "007", cfg.cod.prefijoVer + "01"])}
-                  </div>
-                </div>
-                <div style={{ marginTop: 10 }}>
-                  <Switch label="Códigos irrepetibles" desc="Un código retirado no se reasigna, aunque el documento se anule." on={cfg.cod.unico} set={(v) => up("cod.unico", v)} />
-                  <Switch label="Los formatos heredan el código de su documento padre" desc="El formato del procedimiento PRO-CAL-001 se codifica FOR-CAL-001-01." on={cfg.cod.hereda} set={(v) => up("cod.hereda", v)} />
+              )}
+              <div className="result">
+                <small>Código generado</small>
+                <b>{buildCode(cfg) || "—"}</b>
+                <div style={{ fontSize: 11.5, color: "#C7D9EA", marginTop: 10, fontFamily: "'IBM Plex Mono',monospace" }}>
+                  {joinCode(cfg, ["INS", "PRD", "014", cfg.cod.prefijoVer + "02"])} · {joinCode(cfg, ["FOR", "CAL", "007", cfg.cod.prefijoVer + "01"])}
                 </div>
               </div>
-
-              <div className="card">
-                <h3>Niveles documentales</h3>
-                <p className="hint">ISO 10013 no impone una jerarquía; esta es la que usa Solinal para ordenar la biblioteca y el listado maestro.</p>
-                <div className="lvls">
-                  {NIVELES.map((l) => (
-                    <div className="lvl" key={l.n}>
-                      <span className="no" style={{ background: l.c }}>{l.n}</span>
-                      <div><b>{l.t}</b><small>{l.d}</small>
-                        <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>
-                          {cfg.tipos.filter((t) => t.nivel === l.n).map((t) => <span className="code" key={t.s}>{t.s}</span>)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ marginTop: 10 }}>
+                <Switch label="Códigos irrepetibles" desc="Un código retirado no se reasigna, aunque el documento se anule." on={cfg.cod.unico} set={(v) => up("cod.unico", v)} />
+                <Switch label="Los formatos heredan el código de su documento padre" desc="El formato del procedimiento PRO-CAL-001 se codifica FOR-CAL-001-01." on={cfg.cod.hereda} set={(v) => up("cod.hereda", v)} />
               </div>
             </div>
 
-            <div>
+            <div className="cdgrid">
               <div className="card">
                 <h3>Tipos de información documentada</h3>
-                <p className="hint">Sigla, nivel, longitud del correlativo, retención y si exige firmas de revisión y aprobación.</p>
+                <p className="hint">Sigla, longitud del correlativo y si exige firmas de revisión y aprobación.</p>
                 <div className="tblWrap">
                   <table className="data" style={{ minWidth: 700 }}>
-                    <thead><tr><th>Tipo</th><th>Sigla</th><th>Nivel</th><th>Dígitos</th><th>Retención</th><th>Firmas</th><th>Ejemplo</th><th /></tr></thead>
+                    <thead><tr><th>Tipo</th><th>Sigla</th><th>Dígitos</th><th>Firmas</th><th>Ejemplo</th><th /></tr></thead>
                     <tbody>
                       {cfg.tipos.map((t, i) => (
                         <tr key={t.s + i}>
                           <td style={{ minWidth: 130 }}><input value={t.n} onChange={(e) => { const a = [...cfg.tipos]; a[i] = { ...t, n: e.target.value }; up("tipos", a); }} /></td>
                           <td style={{ width: 92 }}><input value={t.s} maxLength={7} onChange={(e) => { const a = [...cfg.tipos]; a[i] = { ...t, s: e.target.value.toUpperCase() }; up("tipos", a); }} /></td>
-                          <td style={{ width: 74 }}>
-                            <select value={t.nivel} onChange={(e) => { const a = [...cfg.tipos]; a[i] = { ...t, nivel: Number(e.target.value) }; up("tipos", a); }}>
-                              {NIVELES.map((l) => <option key={l.n} value={l.n}>{l.n}</option>)}
-                            </select>
-                          </td>
                           <td style={{ width: 66 }}>
                             <select value={t.digitos} onChange={(e) => { const a = [...cfg.tipos]; a[i] = { ...t, digitos: Number(e.target.value) }; up("tipos", a); }}>
                               {[2, 3, 4].map((d) => <option key={d} value={d}>{d}</option>)}
-                            </select>
-                          </td>
-                          <td style={{ width: 130 }}>
-                            <select value={t.ret} onChange={(e) => { const a = [...cfg.tipos]; a[i] = { ...t, ret: e.target.value }; up("tipos", a); }}>
-                              {["1 año", "3 años", "5 años", "10 años", "Permanente", "Vigencia + 1 año"].map((o) => <option key={o}>{o}</option>)}
                             </select>
                           </td>
                           <td style={{ textAlign: "center" }}><input type="checkbox" checked={t.firma} style={{ width: 16 }} onChange={(e) => { const a = [...cfg.tipos]; a[i] = { ...t, firma: e.target.checked }; up("tipos", a); }} /></td>
@@ -1458,7 +1438,7 @@ export default function ControlDocumental() {
                 <button className="btn sm" style={{ marginTop: 12 }} onClick={() => up("procesos", [...cfg.procesos, { s: "NUE", n: "Nuevo proceso", d: "" }])}>+ Agregar proceso</button>
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* ============ 03 ESTRUCTURAS ============ */}
