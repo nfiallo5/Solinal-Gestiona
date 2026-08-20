@@ -511,6 +511,69 @@ describe('PATCH /documents/:code', () => {
 
 // ---------------------------------------------------------------------------
 
+describe('DELETE /documents/:code', () => {
+  it('401s without a token', async () => {
+    const res = await request(app).delete('/documents/MAN-CAL-001');
+    expect(res.status).toBe(401);
+  });
+
+  it('403s a non-Administrador role', async () => {
+    const doc = await createDocument('elaborador', {
+      title: 'Documento a proteger',
+      type: 'Procedimiento',
+      area: 'CAL',
+      norma: 'ISO 9001:2015',
+      critico: false,
+    });
+    const res = await request(app).delete(`/documents/${doc.body.code}`).set(auth('elaborador'));
+    expect(res.status).toBe(403);
+
+    // Still there afterwards.
+    const still = await prisma.document.findUnique({ where: { code: doc.body.code } });
+    expect(still).not.toBeNull();
+  });
+
+  it('404s an unknown code', async () => {
+    const res = await request(app).delete('/documents/NOP-XXX-999').set(auth('admin'));
+    expect(res.status).toBe(404);
+  });
+
+  it('an Administrador deletes the document, its signatures/comments cascade, and it writes an audit entry', async () => {
+    const created = await createDocument('elaborador', {
+      title: 'Documento a eliminar',
+      type: 'Procedimiento',
+      area: 'CAL',
+      norma: 'ISO 9001:2015',
+      critico: false,
+    });
+    const code = created.body.code as string;
+
+    await request(app)
+      .post(`/documents/${code}/comments`)
+      .set(auth('elaborador'))
+      .send({ text: 'Comentario que debe desaparecer con el documento.' });
+
+    const res = await request(app).delete(`/documents/${code}`).set(auth('admin'));
+    expect(res.status).toBe(204);
+    expect(res.body).toEqual({});
+
+    expect(await prisma.document.findUnique({ where: { code } })).toBeNull();
+    expect(await prisma.documentComment.findMany({ where: { code } })).toEqual([]);
+
+    const getAfter = await request(app).get(`/documents/${code}`).set(auth('admin'));
+    expect(getAfter.status).toBe(404);
+
+    const entry = await prisma.auditLogEntry.findFirst({
+      where: { action: `Eliminó el documento ${code}` },
+      orderBy: { id: 'desc' },
+    });
+    expect(entry).not.toBeNull();
+    expect(entry?.user).toBe(names.admin);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
 describe('comments', () => {
   it('returns the seeded thread oldest-first', async () => {
     const res = await request(app).get('/documents/PRO-CAL-009/comments').set(auth('admin'));
