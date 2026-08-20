@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { ApprovalFlowDialog } from "@/features/documents/ApprovalFlowDialog";
 import { CreateDocumentDialog } from "@/features/documents/CreateDocumentDialog";
+import { EmptyDocumentsState } from "@/features/documents/EmptyDocumentsState";
 import { docTypeBadgeClass, documentTypeOptions, normaOptions, statusBadgeClass, statusLabel } from "@/features/documents/docStyles";
 
 type EstadoFilter = "all" | DocumentStatus | "Vencido";
@@ -75,6 +76,12 @@ export default function Documentos() {
   const docList = useMemo(() => documentsQuery.data ?? [], [documentsQuery.data]);
   const approvalDoc = docList.find((d) => d.code === approvalCode) ?? null;
 
+  const hasActiveFilters =
+    estadoFilter !== "all" || typeFilter !== "all" || normaFilter !== "all" || debouncedSearch !== "";
+  // No filters applied and the (unfiltered) list is empty -> there are truly
+  // zero documents in the system yet, not just zero matches for a filter.
+  const isTrulyEmpty = !hasActiveFilters && docList.length === 0 && !documentsQuery.isPending;
+
   function clearFilters() {
     setEstadoFilter("all");
     setTypeFilter("all");
@@ -115,6 +122,10 @@ export default function Documentos() {
         )}
       </div>
 
+      {isTrulyEmpty ? (
+        <EmptyDocumentsState onCreate={isLector ? undefined : () => openCreateDoc("blank")} />
+      ) : (
+        <>
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3.5">
           <div className="flex flex-wrap gap-3">
@@ -282,6 +293,8 @@ export default function Documentos() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} initialMode={createMode} />
       <ApprovalFlowDialog open={approvalOpen} onOpenChange={setApprovalOpen} doc={approvalDoc} />

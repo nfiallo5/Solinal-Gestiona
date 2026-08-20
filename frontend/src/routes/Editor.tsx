@@ -10,6 +10,8 @@ import { AiToolbox } from "@/features/editor/AiToolbox";
 import { ContentEditor } from "@/features/editor/ContentEditor";
 import { esRegistroPorNivel } from "@/features/documents/docStyles";
 import { GuidePanel } from "@/features/editor/GuidePanel";
+import { CreateDocumentDialog } from "@/features/documents/CreateDocumentDialog";
+import { EmptyDocumentsState } from "@/features/documents/EmptyDocumentsState";
 import { MergeDialog } from "@/features/editor/MergeDialog";
 import { MetadataForm } from "@/features/editor/MetadataForm";
 import { RegulationBanner } from "@/features/editor/RegulationBanner";
@@ -71,6 +73,7 @@ export default function EditorPage() {
   const regulationAlert = regulationQuery.data ?? null;
 
   const [regulationBannerDismissed, setRegulationBannerDismissed] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [versionModalOpen, setVersionModalOpen] = useState(false);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [scannerModalOpen, setScannerModalOpen] = useState(false);
@@ -158,7 +161,16 @@ export default function EditorPage() {
   }
 
   if (!doc) {
-    return <div className="text-sm text-muted-foreground">No hay documentos disponibles.</div>;
+    return (
+      <>
+        <EmptyDocumentsState
+          title="Aún no tienes documentos que editar"
+          description="Crea tu primer documento para empezar a trabajar en el editor: contenido, firmas, control de cambios y asistencia de IA."
+          onCreate={() => setCreateOpen(true)}
+        />
+        <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} initialMode="blank" />
+      </>
+    );
   }
 
   const code = doc.code;

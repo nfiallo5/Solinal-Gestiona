@@ -11,14 +11,20 @@ import { KeyDocumentsList } from "@/features/dashboard/KeyDocumentsList";
 import { GeneralAlerts } from "@/features/dashboard/GeneralAlerts";
 import { VencidosAlertBanner } from "@/features/dashboard/VencidosAlertBanner";
 import { useDashboardMetrics } from "@/features/dashboard/useDashboardMetrics";
+import { CreateDocumentDialog } from "@/features/documents/CreateDocumentDialog";
+import { EmptyDocumentsState } from "@/features/documents/EmptyDocumentsState";
 import { useDocuments } from "@/lib/queries";
 
 export default function Dashboard() {
   const { state } = useAppState();
   const navigate = useNavigate();
   const documentsQuery = useDocuments();
-  const metrics = useDashboardMetrics(documentsQuery.data ?? []);
+  const docs = documentsQuery.data ?? [];
+  const metrics = useDashboardMetrics(docs);
   const [tasksCleared, setTasksCleared] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const isLector = state.session.activeRole === "Lector";
+  const isEmpty = !documentsQuery.isPending && docs.length === 0;
 
   return (
     <div className="flex flex-col gap-5 pb-10 animate-in fade-in duration-500">
@@ -34,6 +40,13 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {isEmpty ? (
+        <EmptyDocumentsState
+          description="Todavía no hay documentos en el sistema. Crea el primero para empezar a ver aquí el flujo de aprobación, el cumplimiento ISO y las tareas de tu equipo."
+          onCreate={isLector ? undefined : () => setCreateOpen(true)}
+        />
+      ) : (
+        <>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
         <Card>
           <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-start sm:justify-between">
@@ -104,6 +117,10 @@ export default function Dashboard() {
         <KeyDocumentsList docs={metrics.keyDocs} />
         <GeneralAlerts pendingCommentsCount={metrics.pendingCommentsCount} />
       </div>
+        </>
+      )}
+
+      <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} initialMode="blank" />
     </div>
   );
 }
