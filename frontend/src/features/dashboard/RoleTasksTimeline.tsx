@@ -26,7 +26,7 @@ export function RoleTasksTimeline({
     <Card className="animate-in fade-in duration-500">
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="size-4 text-amber-600" />
+          <Clock className="size-4 text-secondary" />
           Tareas de rol:{" "}
           <span className="text-secondary">{role}</span>
         </CardTitle>

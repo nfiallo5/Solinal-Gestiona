@@ -4,9 +4,9 @@ import type { TaskTone } from "./roleTasks";
 
 const toneClasses: Record<TaskTone, string> = {
   borrador: "border-secondary/25 bg-secondary/10 text-secondary",
-  revision: "border-status-warning/40 bg-status-warning/20 text-amber-800",
-  aprobacion: "border-status-valid/35 bg-status-valid/15 text-emerald-700",
-  vigente: "border-status-valid/35 bg-status-valid/15 text-emerald-700",
+  revision: "border-status-warning/40 bg-status-warning/20 text-status-warning",
+  aprobacion: "border-status-valid/35 bg-status-valid/15 text-status-valid",
+  vigente: "border-status-valid/35 bg-status-valid/15 text-status-valid",
   rechazado: "border-status-danger/30 bg-status-danger/10 text-status-danger",
 };
 

@@ -49,7 +49,7 @@ export default function Plantillas() {
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Plantillas Estructuradas</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Plantillas Estructuradas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Creación y administración de estructuras documentales. Los cambios aplican a
             documentos futuros.

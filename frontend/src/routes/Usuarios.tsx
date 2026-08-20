@@ -70,7 +70,7 @@ export default function Usuarios() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
+          <h1 className="text-2xl font-semibold text-foreground">
             Usuarios y Roles Organizacionales
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">

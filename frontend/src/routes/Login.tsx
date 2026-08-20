@@ -191,7 +191,7 @@ export default function LoginPage() {
               Solinal<span className="text-primary">.</span> Gestiona
             </span>
           </div>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground">
             Gestión documental, lista para auditar.
           </h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -213,7 +213,7 @@ export default function LoginPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-primary">
               {mode === "login" ? "Acceso" : "Nueva cuenta"}
             </p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight">
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">
               {mode === "login" ? "Iniciar sesión." : "Crear cuenta."}
             </h2>
             <p className="mt-1 text-sm text-navy-foreground/60">

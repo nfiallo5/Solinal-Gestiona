@@ -9,7 +9,7 @@ export default function Cumplimiento() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Cumplimiento normativo</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Cumplimiento normativo</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Muestra cobertura de normas ISO y requisitos asociados a documentos aprobados.
         </p>
