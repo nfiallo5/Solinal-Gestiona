@@ -13,7 +13,7 @@ export function GeneralAlerts({ pendingCommentsCount }: { pendingCommentsCount: 
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-start gap-3 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3.5 py-3">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-700" />
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-warning" />
           <div>
             <strong className="text-sm font-bold text-foreground">
               Revisión pendiente

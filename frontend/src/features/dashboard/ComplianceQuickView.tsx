@@ -4,14 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { ComplianceScores } from "./useDashboardMetrics";
 
+// Plain metric numbers, not a status -- one consistent color for all three
+// instead of a per-row rainbow (color is reserved for actual estado).
 const isoBreakdown: Array<{
   key: keyof ComplianceScores;
   label: string;
-  valueClassName: string;
 }> = [
-  { key: "iso9001", label: "ISO 9001", valueClassName: "text-secondary" },
-  { key: "iso14001", label: "ISO 14001", valueClassName: "text-status-valid" },
-  { key: "iso22000", label: "ISO 22000", valueClassName: "text-amber-600" },
+  { key: "iso9001", label: "ISO 9001" },
+  { key: "iso14001", label: "ISO 14001" },
+  { key: "iso22000", label: "ISO 22000" },
 ];
 
 /** Port of legacy "Cumplimiento rápido" card (id="dash-iso-progress-inner" + per-norma stat cards). */
@@ -44,7 +45,7 @@ export function ComplianceQuickView({
         <Progress value={avgCompliance} className="mt-4 h-2.5" />
 
         <div className="mt-5 grid grid-cols-3 gap-3">
-          {isoBreakdown.map(({ key, label, valueClassName }) => (
+          {isoBreakdown.map(({ key, label }) => (
             <button
               key={key}
               type="button"
@@ -54,7 +55,7 @@ export function ComplianceQuickView({
               <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 {label}
               </span>
-              <span className={`text-xl font-extrabold ${valueClassName}`}>
+              <span className="text-xl font-extrabold text-foreground">
                 {compliance[key]}%
               </span>
             </button>

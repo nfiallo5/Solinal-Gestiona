@@ -82,7 +82,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
   --background: oklch(0.98 0.004 100);
   --foreground: oklch(0.22 0.09 275);
@@ -119,21 +119,23 @@
   --status-warning: oklch(0.82 0.16 90);
   --status-danger: oklch(0.52 0.2 27);
 
-  /* Document type badges */
-  --tag-sanitary: oklch(0.55 0.2 25);
-  --tag-sanitary-bg: oklch(0.97 0.02 25);
-  --tag-permit: oklch(0.62 0.17 55);
-  --tag-permit-bg: oklch(0.97 0.03 70);
-  --tag-lab: oklch(0.5 0.2 300);
-  --tag-lab-bg: oklch(0.97 0.02 300);
-  --tag-technical: oklch(0.52 0.19 265);
-  --tag-technical-bg: oklch(0.97 0.02 265);
-  /* 5th tag hue for "Checklist" documents (legacy has 5 doc types vs. 4
-     Lovable tag colors — promoted here from a feature-local arbitrary
-     value so it's a first-class token like the other 4, see
-     src/features/documents/docStyles.ts). */
-  --tag-checklist: oklch(0.55 0.16 195);
-  --tag-checklist-bg: oklch(0.97 0.02 195);
+  /* Document type badges — deliberately ONE neutral tone for all 5 types.
+     Color is reserved for status (estado/vencido/cumplimiento); a document's
+     *type* (Procedimiento/Política/Manual/...) is categorization, not
+     status, so it no longer gets its own hue. The 5 separate custom
+     properties are kept (rather than collapsing docStyles.ts to a single
+     constant) so a future status-like use of "tipo" can reintroduce color
+     per type without touching every call site again. */
+  --tag-sanitary: var(--muted-foreground);
+  --tag-sanitary-bg: var(--muted);
+  --tag-permit: var(--muted-foreground);
+  --tag-permit-bg: var(--muted);
+  --tag-lab: var(--muted-foreground);
+  --tag-lab-bg: var(--muted);
+  --tag-technical: var(--muted-foreground);
+  --tag-technical-bg: var(--muted);
+  --tag-checklist: var(--muted-foreground);
+  --tag-checklist-bg: var(--muted);
 
   --sidebar: oklch(0.19 0.09 277);
   --sidebar-foreground: oklch(0.99 0.003 250);
