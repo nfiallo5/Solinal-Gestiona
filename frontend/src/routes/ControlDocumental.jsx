@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
+import { saveControlCatalog } from "@/features/documents/controlConfigStore";
 
 /* ================================================================
    SOLINAL · CONTROL DOCUMENTAL
@@ -1133,7 +1134,18 @@ export default function ControlDocumental() {
           </div>
           <div className="actions">
             <button className="btn" onClick={() => flash("Configuración restablecida a los valores sugeridos.")}>Restablecer</button>
-            <button className="btn pri" onClick={() => flash("Configuración guardada y aplicada a la biblioteca documental.")}>Guardar configuración</button>
+            <button
+              className="btn pri"
+              onClick={() => {
+                saveControlCatalog({
+                  tipos: cfg.tipos.map((t) => ({ s: t.s, n: t.n })),
+                  procesos: cfg.procesos.map((p) => ({ s: p.s, n: p.n })),
+                });
+                flash("Configuración guardada y aplicada a la biblioteca documental.");
+              }}
+            >
+              Guardar configuración
+            </button>
           </div>
         </header>
         <div className="rule" />

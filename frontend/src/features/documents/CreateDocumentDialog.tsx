@@ -26,7 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { documentAreas, documentTypeOptions, nextDocumentCode, normaOptions } from "./docStyles";
+import { nextDocumentCode, normaOptions } from "./docStyles";
+import { getDocumentAreaOptions, getDocumentTypeOptions } from "./controlConfigStore";
 
 /** Port of legacy js/templates.js openCreateDoc / templateChanged / createDocument. */
 
@@ -45,7 +46,7 @@ const emptyForm = {
   templateKey: "",
   title: "",
   type: "Procedimiento" as DocumentType,
-  area: documentAreas[0].code,
+  area: "CAL",
   norma: "ISO 9001:2015" as (typeof normaOptions)[number],
   description: "",
   critical: false,
@@ -54,7 +55,6 @@ const emptyForm = {
 export function CreateDocumentDialog({
   open,
   onOpenChange,
-  initialMode,
   initialTemplateKey,
 }: CreateDocumentDialogProps) {
   const navigate = useNavigate();
@@ -63,6 +63,13 @@ export function CreateDocumentDialog({
 
   const templates = useTemplates().data ?? [];
   const documents = useDocuments().data ?? [];
+
+  // "Tipo documental" / "Área" options come from Control Documental's
+  // "Tipos y codificación" table (saved to localStorage from there) instead
+  // of a fixed list, falling back to the built-in defaults until an admin
+  // has saved a configuration.
+  const typeOptions = getDocumentTypeOptions();
+  const areaOptions = getDocumentAreaOptions();
 
   useEffect(() => {
     if (!open) return;
@@ -75,38 +82,26 @@ export function CreateDocumentDialog({
         templateKey: preset.key,
         title: `Borrador — ${preset.name}`,
         type: preset.type,
+        area: areaOptions[0]?.code ?? emptyForm.area,
         norma: preset.norma as (typeof normaOptions)[number],
         description: preset.desc,
       });
     } else {
-      setForm({ ...emptyForm, templateKey: initialMode === "template" ? "__pick__" : "" });
+      setForm({
+        ...emptyForm,
+        templateKey: "",
+        type: typeOptions[0]?.value ?? emptyForm.type,
+        area: areaOptions[0]?.code ?? emptyForm.area,
+      });
     }
     // `templates.length` is in the deps so a dialog opened before the template
     // list finished loading still picks up its preset once it arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialMode, initialTemplateKey, templates.length]);
+  }, [open, initialTemplateKey, templates.length]);
 
-  const selectedTemplate =
-    form.templateKey && form.templateKey !== "__pick__"
-      ? templates.find((t) => t.key === form.templateKey)
-      : undefined;
-
-  function handleTemplateChange(key: string) {
-    if (!key || key === "__blank__") {
-      setForm((f) => ({ ...f, templateKey: "" }));
-      return;
-    }
-    const template = templates.find((t) => t.key === key);
-    if (!template) return;
-    setForm((f) => ({
-      ...f,
-      templateKey: key,
-      title: `Borrador — ${template.name}`,
-      type: template.type,
-      norma: template.norma as (typeof normaOptions)[number],
-      description: template.desc,
-    }));
-  }
+  const selectedTemplate = initialTemplateKey
+    ? templates.find((t) => t.key === initialTemplateKey)
+    : undefined;
 
   // Preview only — the real control code is generated server-side by
   // `POST /documents` (same TIPO-AREA-NNN rule, ported to backend/src/lib).
@@ -152,34 +147,12 @@ export function CreateDocumentDialog({
         <DialogHeader>
           <DialogTitle>Crear nuevo documento</DialogTitle>
           <DialogDescription>
-            Empieza desde cero o parte de una plantilla estructurada.
+            Completa los datos para generar el código de control automáticamente.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 grid gap-1.5">
-              <Label>Plantilla base</Label>
-              <Select
-                value={form.templateKey === "__pick__" ? "" : form.templateKey || "__blank__"}
-                onValueChange={handleTemplateChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="-- Crear en blanco (sin plantilla) --" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__blank__">
-                    -- Crear en blanco (sin plantilla) --
-                  </SelectItem>
-                  {templates.map((t) => (
-                    <SelectItem key={t.key} value={t.key}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="grid gap-1.5">
               <Label>Tipo documental</Label>
               <Select
@@ -190,9 +163,9 @@ export function CreateDocumentDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {documentTypeOptions.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
+                  {typeOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -209,7 +182,7 @@ export function CreateDocumentDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {documentAreas.map((a) => (
+                  {areaOptions.map((a) => (
                     <SelectItem key={a.code} value={a.code}>
                       {a.label}
                     </SelectItem>
