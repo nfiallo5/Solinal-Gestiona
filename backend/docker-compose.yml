@@ -1,0 +1,30 @@
+# Local PostgreSQL for the Solinal Gestiona backend.
+#
+# NOTE: Docker is not installed on the machine this repo was developed on, so
+# this file is provided for other environments. Locally we use the already
+# running system PostgreSQL 16 — see backend/README.md.
+#
+#   docker compose up -d
+#   DATABASE_URL="postgresql://solinal:solinal@localhost:5432/solinal_gestiona?schema=public" npx prisma migrate dev
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: solinal-gestiona-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: solinal
+      POSTGRES_PASSWORD: solinal
+      POSTGRES_DB: solinal_gestiona
+    ports:
+      - "5432:5432"
+    volumes:
+      - solinal-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solinal -d solinal_gestiona"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  solinal-pgdata:

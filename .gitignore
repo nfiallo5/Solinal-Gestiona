@@ -14,3 +14,8 @@ yarn-debug.log*
 yarn-error.log*
 
 .DS_Store
+
+# Local env overrides (VITE_API_URL, ...)
+.env
+.env.*
+!.env.example

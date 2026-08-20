@@ -1,0 +1,12 @@
+// Production build: only `src/`, so `dist/server.js` sits at the top of dist/.
+// `tsconfig.json` (used by `npm run typecheck`) additionally covers
+// prisma/seed.ts and tests/, which are run through tsx/vitest and never built.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "prisma"]
+}

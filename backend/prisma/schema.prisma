@@ -1,0 +1,368 @@
+// ---------------------------------------------------------------------------
+// Solinal Gestiona — backend schema
+//
+// Direct port of the TypeScript interfaces in `../../src/data/seed.ts` (the
+// frontend's single source of truth). Spanish field and enum names are kept
+// VERBATIM on purpose: a lot of UI strings and equality comparisons key off
+// these exact literals. Do not rename them.
+//
+// Enum naming rule (see backend/NOTES.md § "Enum name mapping"):
+//   - Prisma enum *value identifiers* may contain accents (verified), so
+//     `Política`, `aprobación`, etc. are written as-is.
+//   - They may NOT contain spaces. The two values that contain a space
+//     (`En aprobación`, `No aplica`) use an underscore identifier plus
+//     `@map(...)` so the *database* label keeps the exact original string.
+//     Prisma Client still hands back the underscore identifier, so
+//     `src/lib/enums.ts` provides the identifier <-> wire-string maps that
+//     `src/lib/serialize.ts` applies on the way out and route handlers apply
+//     on the way in. Every other enum value round-trips unchanged.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// seed.ts `DocumentType`. All five identifiers round-trip unchanged.
+enum DocumentType {
+  Procedimiento
+  Política
+  Manual
+  Instructivo
+  Checklist
+}
+
+/// seed.ts `DocumentStatus`. `En_aprobación` maps to the DB/wire literal
+/// "En aprobación" (space). Use ESTADO_TO_WIRE / ESTADO_FROM_WIRE.
+enum DocumentStatus {
+  Borrador
+  En_aprobación @map("En aprobación")
+  Aprobado
+  Rechazado
+}
+
+/// seed.ts `TemplateLevel` — position in the ISO 9001 documentary pyramid.
+enum TemplateLevel {
+  Política
+  Manual
+  Procedimiento
+  Instructivo
+  Registro
+}
+
+/// seed.ts `RoleName`. The 5-role model is fixed; do not extend.
+enum RoleName {
+  Administrador
+  Elaborador
+  Revisor
+  Aprobador
+  Lector
+}
+
+/// seed.ts `DocumentTemplate.periodicidadRevision`. `No_aplica` maps to the
+/// DB/wire literal "No aplica" (space). Use PERIODICIDAD_TO_WIRE / _FROM_WIRE.
+enum PeriodicidadRevision {
+  Anual
+  Bienal
+  Semestral
+  No_aplica @map("No aplica")
+}
+
+/// seed.ts `OrgConfig.passwordPolicy`.
+enum PasswordPolicy {
+  weak
+  medium
+  strong
+}
+
+/// seed.ts `OrgConfig.doubleApproval`.
+enum DoubleApproval {
+  none
+  critical
+  all
+}
+
+// ---------------------------------------------------------------------------
+// Core entities
+// ---------------------------------------------------------------------------
+
+/// `AppUser` (seed.ts) merged with `DemoCredential` (credentials.ts).
+model User {
+  id           String   @id @default(uuid())
+  /// Display name, e.g. "Ana Torres". UNIQUE because the frontend identifies
+  /// users by name everywhere (`activeUser === doc.creador`,
+  /// `doc.signatures.includes(activeUser)`), so names must be unambiguous.
+  name         String   @unique
+  /// 2-letter avatar initials, e.g. "AT".
+  short        String
+  email        String   @unique
+  passwordHash String
+  role         RoleName
+  /// Only set for users created via the "Nuevo usuario" modal.
+  status       String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // --- Server-side lockout (was `state.session.failedAttempts` / `isLocked`
+  //     in AppStateContext.tsx; locks at 3 consecutive failures) ------------
+  /// Authoritative consecutive-failure counter. Reset to 0 on success.
+  failedAttempts Int       @default(0)
+  /// Non-null while the account is locked out.
+  lockedAt       DateTime?
+
+  documentsCreated Document[]          @relation("DocumentCreator")
+  signatures       DocumentSignature[]
+  comments         DocumentComment[]
+  loginAttempts    LoginAttempt[]
+}
+
+/// `SolinalDocument` (seed.ts).
+model Document {
+  /// Human-assigned control code, e.g. "PRO-CAL-009" — TIPO-AREA-NNN.
+  /// Generated server-side by `src/lib/documentCode.ts`, never client-supplied.
+  code    String         @id
+  title   String
+  type    DocumentType
+  norma   String
+  estado  DocumentStatus
+  version String
+
+  /// FK to the creating user...
+  creadorId   String
+  creadorUser User   @relation("DocumentCreator", fields: [creadorId], references: [id])
+  /// ...plus the display name denormalized onto the row, because the frontend
+  /// compares `state.session.activeUser === doc.creador` against a name string.
+  /// This is the field that serializes as `creador` in API responses.
+  creador     String
+
+  vencido Boolean @default(false)
+  critico Boolean @default(false)
+  /// Rich HTML from the contentEditable surface (ContentEditor.tsx).
+  content String  @db.Text
+
+  /// Copied from `template.nivel` at creation. NULL for the 7 seed documents
+  /// (they predate templates) — do not invent values for them.
+  nivel           TemplateLevel?
+  /// Snapshot of the originating template's `rolesRequeridos`, shape
+  /// `{ elaborador, revisor, aprobador, dobleAprobacion }`. NULL for seed docs.
+  /// Stored as JSONB: it is a point-in-time snapshot, not a live relation.
+  rolesRequeridos Json?
+
+  /// DIVERGENCE: the frontend keeps a single global `session.isSectionLocked`.
+  /// Section locking is per-document here (`handleToggleLock` in Editor.tsx —
+  /// only the doc's `creador` or an Administrador may toggle it).
+  sectionLocked Boolean @default(false)
+
+  /// Optimistic-concurrency counter, bumped on every content write. A
+  /// `PATCH /documents/:code` carrying a stale value gets a 409 that drives
+  /// the real merge flow behind MergeDialog.tsx.
+  contentVersion Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  signatures  DocumentSignature[]
+  revisiones  DocumentRevision[]
+  comments    DocumentComment[]
+  scanImports ScanImport[]
+
+  @@index([estado])
+  @@index([type])
+  @@index([norma])
+  @@index([vencido])
+}
+
+/// `SolinalDocument.signatures: string[]` normalized into a join table.
+/// The unique constraint enforces "can't sign twice" at the DB level.
+/// Serializes back to the frontend as `string[]` of names, signedAt ASCENDING
+/// (the frontend appends, so oldest first).
+model DocumentSignature {
+  id           String   @id @default(uuid())
+  documentCode String
+  document     Document @relation(fields: [documentCode], references: [code], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  /// Name denormalized at signing time — a signature must keep showing the
+  /// name that was signed with, even if the user is later renamed.
+  userName     String
+  signedAt     DateTime @default(now())
+
+  @@unique([documentCode, userId])
+  @@index([documentCode, signedAt])
+}
+
+/// `SolinalDocument.revisiones: string[]` normalized into a join table.
+/// `id` is an autoincrement Int (not uuid) so "newest first" is an exact,
+/// tie-free `orderBy: { id: 'desc' }` — the frontend PREPENDS revisions and
+/// then indexes into the array positionally (`handleRestoreVersion(idx)`).
+model DocumentRevision {
+  id           Int      @id @default(autoincrement())
+  documentCode String
+  document     Document @relation(fields: [documentCode], references: [code], onDelete: Cascade)
+  /// Freeform history line, e.g. "v1.1: Ajustes en límites de humedad".
+  text         String
+  createdAt    DateTime @default(now())
+
+  @@index([documentCode, id])
+}
+
+/// `DocumentTemplate` (seed.ts), including the ISO documentary-pyramid fields.
+model DocumentTemplate {
+  key     String       @id
+  name    String
+  norma   String
+  type    DocumentType
+  desc    String
+  preview String
+  /// Rich HTML seeded into a new document's `content` on creation.
+  content String       @db.Text
+
+  /// @deprecated superseded by `secciones`. Kept because seed data and
+  /// TemplateCard / TemplateDetailDialog / CreateDocumentDialog still read it.
+  mandatory String[]
+
+  nivel                TemplateLevel
+  /// Specific clause of the norm this template covers, e.g. "7.5.1".
+  clausulaIso          String
+  /// `TemplateSection[]` — `{ titulo, proposito, obligatoria }[]`.
+  secciones            Json
+  periodicidadRevision PeriodicidadRevision
+  tiempoRetencionAnios Int
+
+  /// Self-referencing FK: the parent template in the documentary pyramid.
+  documentoPadreKey String?
+  padre             DocumentTemplate?  @relation("TemplateHierarchy", fields: [documentoPadreKey], references: [key])
+  hijos             DocumentTemplate[] @relation("TemplateHierarchy")
+
+  /// `{ elaborador, revisor, aprobador, dobleAprobacion }` — copied onto a
+  /// document at creation time. Required on templates, optional on documents.
+  rolesRequeridos Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// `AuditLogEntry` (seed.ts). Written ONLY by the server via
+/// `src/lib/audit.ts#writeAudit()` — never posted by the client.
+/// `user` and `role` are denormalized at write time on purpose: an audit row
+/// must show what the actor's role WAS, not what it is now. No FK for that
+/// reason.
+model AuditLogEntry {
+  id     Int      @id @default(autoincrement())
+  action String
+  user   String
+  role   RoleName
+  /// "YYYY-MM-DD" — kept as a preformatted string so the table renders
+  /// byte-identically to today.
+  date   String
+  /// "HH:mm" — same reason.
+  time   String
+  /// Real `req.ip` (the frontend faked `192.168.1.${random}`).
+  ip     String
+  /// Sortable timestamp. List newest-first with
+  /// `orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]`.
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([user])
+  @@index([role])
+}
+
+/// `DocumentComment` (seed.ts).
+model DocumentComment {
+  id   Int      @id @default(autoincrement())
+  code String
+  document Document @relation(fields: [code], references: [code], onDelete: Cascade)
+  /// FK to the author...
+  authorId   String
+  authorUser User   @relation(fields: [authorId], references: [id])
+  /// ...plus the display name denormalized, which is what serializes as
+  /// `author` in API responses.
+  author     String
+  /// "YYYY-MM-DD HH:mm" — preformatted, matching the frontend's shape.
+  date String
+  text String
+  createdAt DateTime @default(now())
+
+  @@index([code, createdAt])
+}
+
+/// `OrgConfig` (seed.ts) — singleton row, always `id = 1`.
+model OrgConfig {
+  id               Int            @id @default(1)
+  orgName          String
+  brandColor       String
+  twoFactorEnabled Boolean        @default(false)
+  passwordPolicy   PasswordPolicy
+  doubleApproval   DoubleApproval
+  updatedAt        DateTime       @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Auth / lockout
+// ---------------------------------------------------------------------------
+
+/// Append-only log of login attempts. The authoritative lock state lives on
+/// `User.failedAttempts` / `User.lockedAt`; this table is the auditable trail
+/// and also covers attempts against emails that match no user (userId NULL).
+model LoginAttempt {
+  id        Int      @id @default(autoincrement())
+  /// Normalized (trimmed, lowercased) email that was attempted.
+  email     String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  success   Boolean
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Demo flows made real (see backend/NOTES.md § "Demo flows")
+// ---------------------------------------------------------------------------
+
+/// One row per `POST /documents/:code/scan-import`. There is no real OCR;
+/// the payload is the structured data the client submitted, kept so the
+/// ingest that mutated the document content is auditable.
+model ScanImport {
+  id           Int      @id @default(autoincrement())
+  documentCode String
+  document     Document @relation(fields: [documentCode], references: [code], onDelete: Cascade)
+  /// `{ inspector, resultado, codigoRegistro?, fechaInspeccion? }`.
+  payload      Json
+  /// Denormalized name of whoever ran the import (no FK — historical record).
+  createdBy    String?
+  createdAt    DateTime @default(now())
+
+  @@index([documentCode, createdAt])
+}
+
+/// Replaces the hardcoded `NORMA_CON_CAMBIO_PENDIENTE` /
+/// `REGULATION_UPDATE_MARKER` / `regulationUpdateText` consts in
+/// `src/features/editor/aiEngine.ts`. The banner shows when a document's
+/// `norma` has an active alert AND `document.content` does not already
+/// contain that alert's `marker` — the same predicate as today, data-driven.
+model RegulationAlert {
+  id        Int      @id @default(autoincrement())
+  /// The norm with a pending update, e.g. "ISO 22000:2018".
+  norma     String
+  /// Idempotency marker searched for inside document content.
+  marker    String
+  /// HTML appended to the document by POST /documents/:code/apply-regulation.
+  bodyHtml  String   @db.Text
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([norma, marker])
+  @@index([norma, active])
+}
