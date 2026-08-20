@@ -113,7 +113,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} initialMode="blank" />
+      <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

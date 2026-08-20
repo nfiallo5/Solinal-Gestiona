@@ -45,7 +45,6 @@ export default function Documentos() {
   const [search, setSearch] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createMode, setCreateMode] = useState<"blank" | "template">("blank");
 
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [approvalCode, setApprovalCode] = useState<string | null>(null);
@@ -95,10 +94,6 @@ export default function Documentos() {
     toast.success(`Documento ${code} cargado en el editor.`);
   }
 
-  function openCreateDoc(mode: "blank" | "template") {
-    setCreateMode(mode);
-    setCreateOpen(true);
-  }
 
   function openApprovalFlow(code: string) {
     setApprovalCode(code);
@@ -115,7 +110,7 @@ export default function Documentos() {
           </p>
         </div>
         {!isLector && (
-          <Button onClick={() => openCreateDoc("blank")}>
+          <Button onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" />
             Crear documento
           </Button>
@@ -123,7 +118,7 @@ export default function Documentos() {
       </div>
 
       {isTrulyEmpty ? (
-        <EmptyDocumentsState onCreate={isLector ? undefined : () => openCreateDoc("blank")} />
+        <EmptyDocumentsState onCreate={isLector ? undefined : () => setCreateOpen(true)} />
       ) : (
         <>
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -296,7 +291,7 @@ export default function Documentos() {
         </>
       )}
 
-      <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} initialMode={createMode} />
+      <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} />
       <ApprovalFlowDialog open={approvalOpen} onOpenChange={setApprovalOpen} doc={approvalDoc} />
     </div>
   );

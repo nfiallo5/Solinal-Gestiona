@@ -1,6 +1,5 @@
 import { useComplianceScores } from "@/features/compliance/useCompliance";
 import { IsoScoreCard } from "@/features/compliance/IsoScoreCard";
-import { ComplianceAlerts } from "@/features/compliance/ComplianceAlerts";
 import { RequirementsGrid } from "@/features/compliance/RequirementsGrid";
 
 export default function Cumplimiento() {
@@ -21,7 +20,6 @@ export default function Cumplimiento() {
         ))}
       </div>
 
-      <ComplianceAlerts />
       <RequirementsGrid />
     </div>
   );

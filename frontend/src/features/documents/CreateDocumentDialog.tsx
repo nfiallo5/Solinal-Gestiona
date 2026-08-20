@@ -34,8 +34,6 @@ import { getDocumentAreaOptions, getDocumentTypeOptions } from "./controlConfigS
 interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** "blank" | "template" — mirrors legacy openCreateDoc(mode) initial focus. */
-  initialMode: "blank" | "template";
   /** Pre-selects a specific template on open — e.g. when arriving from the
    * "Crear documento" button on a template's detail view in Plantillas.tsx,
    * instead of leaving the user to pick again from the dropdown. */

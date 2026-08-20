@@ -109,7 +109,6 @@ export default function Plantillas() {
           <CreateDocumentDialog
             open={createDocOpen}
             onOpenChange={setCreateDocOpen}
-            initialMode="template"
             initialTemplateKey={createDocTemplateKey}
           />
         </>

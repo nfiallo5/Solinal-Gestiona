@@ -168,7 +168,7 @@ export default function EditorPage() {
           description="Crea tu primer documento para empezar a trabajar en el editor: contenido, firmas, control de cambios y asistencia de IA."
           onCreate={() => setCreateOpen(true)}
         />
-        <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} initialMode="blank" />
+        <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} />
       </>
     );
   }

@@ -21,12 +21,6 @@ export interface RequirementRow {
   detail: string;
 }
 
-export interface ComplianceAlert {
-  id: string;
-  title: string;
-  detail: string;
-}
-
 const NORMS = [
   {
     norma: "ISO 9001:2015",
@@ -144,56 +138,4 @@ export function useOrphanTemplates() {
       return !padreTieneDocAprobado;
     });
   }, [templates, documents]);
-}
-
-/**
- * Legacy pg-comp had two hardcoded alert-cards ("3 documentos en revisión
- * sin actividad" / "ISO 22000 cap. 7.5 sin documentos"). The seed schema
- * has no "last moved" timestamp per document, so the "15 días sin
- * movimiento" wording can't be reproduced literally — here it's simplified
- * to "documents currently parked in the En aprobación state", and the
- * orphan-requirement alert is generated dynamically from
- * useRequirementMapping() instead of being a fixed string.
- */
-export function useComplianceAlerts(): ComplianceAlert[] {
-  const documents = useDocuments().data ?? [];
-  const requirements = useRequirementMapping();
-
-  return useMemo(() => {
-    const alerts: ComplianceAlert[] = [];
-
-    const stuck = documents.filter((d) => d.estado === "En aprobación");
-    if (stuck.length > 0) {
-      alerts.push({
-        id: "stuck-review",
-        title: "Documentos en revisión sin resolver",
-        detail: `${stuck.length} documento(s) permanecen en flujo de aprobación: ${stuck
-          .map((d) => d.code)
-          .join(", ")}.`,
-      });
-    }
-
-    requirements
-      .filter((r) => r.status === "danger")
-      .forEach((r) => {
-        alerts.push({
-          id: `orphan-${r.key}`,
-          title: "Requisito huérfano de documentación",
-          detail: `${r.norma} no tiene documentos de tipo "${r.type}" asociados vigentes.`,
-        });
-      });
-
-    const expired = documents.filter((d) => d.vencido && d.estado === "Aprobado");
-    if (expired.length > 0) {
-      alerts.push({
-        id: "expired-docs",
-        title: "Documentos vigentes vencidos",
-        detail: `${expired.length} documento(s) requieren renovación de firmas: ${expired
-          .map((d) => d.code)
-          .join(", ")}.`,
-      });
-    }
-
-    return alerts;
-  }, [documents, requirements]);
 }
