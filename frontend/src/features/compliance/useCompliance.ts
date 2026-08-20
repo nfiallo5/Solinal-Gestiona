@@ -32,21 +32,18 @@ const NORMS = [
     norma: "ISO 9001:2015",
     label: "ISO 9001:2015 (Calidad)",
     sub: "Requisitos cubiertos con documentación aprobada.",
-    base: 40,
     step: 15,
   },
   {
     norma: "ISO 14001:2015",
     label: "ISO 14001:2015 (Ambiente)",
     sub: "Control ambiental y registros asociados.",
-    base: 50,
     step: 16,
   },
   {
     norma: "ISO 22000:2018",
     label: "ISO 22000:2018 (Inocuidad)",
     sub: "Planes de inocuidad y verificación HACCP.",
-    base: 35,
     step: 13,
   },
 ] as const;
@@ -61,9 +58,9 @@ export function useComplianceScores(): IsoScore[] {
   const documents = useDocuments().data ?? [];
   return useMemo(() => {
     const approved = documents.filter((d) => d.estado === "Aprobado");
-    return NORMS.map(({ norma, label, sub, base, step }) => {
+    return NORMS.map(({ norma, label, sub, step }) => {
       const count = approved.filter((d) => d.norma === norma).length;
-      const score = Math.min(100, base + count * step);
+      const score = Math.min(100, count * step);
       return { norma, label, sub, score, status: scoreStatus(score) };
     });
   }, [documents]);

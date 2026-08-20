@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppState } from "@/context/AppStateContext";
 import { StatCard } from "@/features/dashboard/StatCard";
 import { ComplianceQuickView } from "@/features/dashboard/ComplianceQuickView";
-import { RoleTasksTimeline } from "@/features/dashboard/RoleTasksTimeline";
 import { KeyDocumentsList } from "@/features/dashboard/KeyDocumentsList";
 import { GeneralAlerts } from "@/features/dashboard/GeneralAlerts";
 import { VencidosAlertBanner } from "@/features/dashboard/VencidosAlertBanner";
@@ -21,7 +20,6 @@ export default function Dashboard() {
   const documentsQuery = useDocuments();
   const docs = documentsQuery.data ?? [];
   const metrics = useDashboardMetrics(docs);
-  const [tasksCleared, setTasksCleared] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const isLector = state.session.activeRole === "Lector";
   const isEmpty = !documentsQuery.isPending && docs.length === 0;
@@ -42,7 +40,7 @@ export default function Dashboard() {
 
       {isEmpty ? (
         <EmptyDocumentsState
-          description="Todavía no hay documentos en el sistema. Crea el primero para empezar a ver aquí el flujo de aprobación, el cumplimiento ISO y las tareas de tu equipo."
+          description="Todavía no hay documentos en el sistema. Crea el primero para empezar a ver aquí el flujo de aprobación y el cumplimiento ISO."
           onCreate={isLector ? undefined : () => setCreateOpen(true)}
         />
       ) : (
@@ -108,12 +106,7 @@ export default function Dashboard() {
 
       <VencidosAlertBanner count={metrics.vencidosCount} />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <RoleTasksTimeline
-          role={state.session.activeRole}
-          cleared={tasksCleared}
-          onToggleCleared={() => setTasksCleared((c) => !c)}
-        />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <KeyDocumentsList docs={metrics.keyDocs} />
         <GeneralAlerts pendingCommentsCount={metrics.pendingCommentsCount} />
       </div>

@@ -21,21 +21,20 @@ export interface DashboardMetrics {
 }
 
 /**
- * Direct port of window.calculateComplianceScores() from
- * reference/legacy_vanilla/js/dashboard.js — same base scores + per-doc
- * increments, capped at 100.
+ * Compliance score per norm: purely a function of real approved documents
+ * (count * step, capped at 100). The legacy prototype this was ported from
+ * added a hardcoded base score (40/50/35) on top of that, so every tenant
+ * started with fake partial compliance regardless of real data -- dropped,
+ * since a tenant with zero approved documents has zero real compliance.
  */
 export function calculateComplianceScores(
   documents: SolinalDocument[],
 ): ComplianceScores {
   const approved = documents.filter((d) => d.estado === "Aprobado");
 
-  const iso9001 =
-    40 + approved.filter((d) => d.norma === "ISO 9001:2015").length * 15;
-  const iso14001 =
-    50 + approved.filter((d) => d.norma === "ISO 14001:2015").length * 16;
-  const iso22000 =
-    35 + approved.filter((d) => d.norma === "ISO 22000:2018").length * 13;
+  const iso9001 = approved.filter((d) => d.norma === "ISO 9001:2015").length * 15;
+  const iso14001 = approved.filter((d) => d.norma === "ISO 14001:2015").length * 16;
+  const iso22000 = approved.filter((d) => d.norma === "ISO 22000:2018").length * 13;
 
   return {
     iso9001: Math.min(100, iso9001),
