@@ -219,6 +219,27 @@ the `package.json#prisma.seed` config in favour of `prisma.config.ts` (the CLI
 already warns about it on every command). Upgrading is a separate, deliberate
 task — do not bump it as a side effect of adding a route.
 
+### 17. `DocumentTypeCatalog` exists but nothing reads/writes it yet
+
+Migration `20260820140634_add_document_type_catalog` adds this table —
+the backend-persisted form of Control Documental's "Tipos de información
+documentada" table, which until now only lived in one browser's
+localStorage (`frontend/src/features/documents/controlConfigStore.ts`).
+Seeded 1:1 with the 5 current `DocumentType` enum values so nothing
+changes behaviorally today.
+
+`Document.type` and `DocumentTemplate.type` still use the `DocumentType`
+enum. Cutting them over to reference this table by `sigla` (and retiring
+the enum) needs, at minimum: a `POST/PATCH/DELETE` route set for the
+catalog itself, `Document`/`DocumentTemplate` FK columns replacing
+`type`, every serializer and the document-code generator
+(`src/lib/documentCode.ts`) updated to look up `documentTypeAbbr`/digits
+from the DB instead of a hardcoded map, and the frontend's
+`docStyles.ts` (badge colors keyed by the enum) plus
+`controlConfigStore.ts` (localStorage) switched to call real endpoints.
+That's a lot of surface area for one pass — deliberately left as
+follow-up work, not attempted alongside adding the table.
+
 ---
 
 ## Layer 2 — Routes

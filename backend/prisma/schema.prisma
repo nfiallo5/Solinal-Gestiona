@@ -251,6 +251,57 @@ model DocumentTemplate {
   updatedAt DateTime @updatedAt
 }
 
+/// Document-type catalog — the backend-persisted form of Control
+/// Documental's "Tipos de información documentada" table (the "Tipos y
+/// codificación" tab), which until now only lived in the browser's
+/// localStorage via `frontend/src/features/documents/controlConfigStore.ts`.
+///
+/// PREPARATION ONLY: `Document.type` and `DocumentTemplate.type` still use
+/// the fixed `DocumentType` enum below and are NOT wired to this table yet.
+/// This model exists so the sigla catalog has a real, shared, multi-device
+/// home instead of one browser's localStorage; seeded 1:1 with the 5
+/// current `DocumentType` enum values so nothing changes behaviorally.
+/// Cutting `Document`/`DocumentTemplate` over to reference this table by
+/// `sigla` (and retiring the enum) is deliberately left as separate,
+/// follow-up work — that touches the document-code generator, every
+/// serializer, and the frontend's docStyles.ts badge/coding logic, which is
+/// a lot of surface area to change in the same pass as adding the table.
+model DocumentTypeCatalog {
+  /// Stable short code used in the TIPO segment of a document control code
+  /// (TIPO-AREA-NNN, e.g. "PRO-CAL-009"). Uppercase by convention; matches
+  /// `documentTypeAbbr` in the frontend's docStyles.ts.
+  sigla String @id
+
+  /// Display name, editable by an Administrador from Control Documental —
+  /// e.g. "Procedimiento". Renaming this does not change `sigla`.
+  nombre String
+
+  /// Position in the ISO documentary pyramid (1 = topmost, e.g.
+  /// Política/Manual). A plain integer, not the fixed `TemplateLevel` enum,
+  /// so a custom type an admin adds later isn't boxed into 5 named levels.
+  nivel Int
+
+  /// Digits in the correlativo segment of the control code, e.g. 3 for the
+  /// "009" in "PRO-CAL-009".
+  digitos Int @default(3)
+
+  /// Freeform retention label, e.g. "5 años", "Permanente".
+  retencion String
+
+  /// Whether documents of this type require elaborador/revisor/aprobador
+  /// signatures — mirrors the "Firmas" column in Control Documental.
+  firma Boolean @default(true)
+
+  /// Display order in Control Documental's table / any dropdown built from
+  /// this catalog.
+  orden Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orden])
+}
+
 /// `AuditLogEntry` (seed.ts). Written ONLY by the server via
 /// `src/lib/audit.ts#writeAudit()` — never posted by the client.
 /// `user` and `role` are denormalized at write time on purpose: an audit row
