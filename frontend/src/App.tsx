@@ -13,6 +13,7 @@ import Plantillas from "@/routes/Plantillas";
 import Auditoria from "@/routes/Auditoria";
 import Usuarios from "@/routes/Usuarios";
 import Configuracion from "@/routes/Configuracion";
+import ControlDocumental from "@/routes/ControlDocumental";
 
 /**
  * Router setup — the 8 routes from DESIGN_SYSTEM.md section 2.
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="editor" element={<Editor />} />
               <Route path="cumplimiento" element={<Cumplimiento />} />
               <Route path="plantillas" element={<Plantillas />} />
+              <Route path="control-documental" element={<ControlDocumental />} />
               <Route path="auditoria" element={<Auditoria />} />
               <Route path="usuarios" element={<Usuarios />} />
               <Route path="configuracion" element={<Configuracion />} />

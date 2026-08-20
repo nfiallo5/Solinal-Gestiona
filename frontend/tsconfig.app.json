@@ -12,6 +12,10 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    /** ControlDocumental.jsx is a plain-JS page ported from a design mockup;
+     * allowJs lets it be imported from App.tsx. checkJs stays off (default)
+     * so it isn't subjected to `strict` type-checking. */
+    "allowJs": true,
 
     "strict": true,
     "noUnusedLocals": false,

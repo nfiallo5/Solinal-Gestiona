@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LockScreen } from "@/components/layout/LockScreen";
 import logoIcon from "@/assets/logo-icon.png";
+import logoWordmark from "@/assets/logo-gestiona-blanco.svg";
 
 function GoogleIcon() {
   return (
@@ -205,7 +206,7 @@ export default function LoginPage() {
       <div className="flex flex-col justify-center bg-navy px-6 py-16 text-navy-foreground sm:px-12 lg:px-20">
         <div className="mx-auto flex w-full max-w-sm flex-col gap-7">
           <div className="flex flex-col items-center gap-2 lg:hidden">
-            <img src={logoIcon} alt="" className="size-8 object-contain" />
+            <img src={logoWordmark} alt="Solinal. Gestiona AI" className="h-10 w-auto object-contain" />
           </div>
 
           <div>

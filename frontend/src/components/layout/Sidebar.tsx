@@ -10,6 +10,7 @@ import {
   History,
   Users,
   Settings,
+  ClipboardCheck,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -20,6 +21,7 @@ import { authApi } from "@/lib/api";
 import { useDocuments } from "@/lib/queries";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import logoIcon from "@/assets/logo-icon.png";
+import logoWordmark from "@/assets/logo-gestiona-blanco.svg";
 
 /**
  * Sidebar — visual pattern (navy background, mint accent, logo treatment)
@@ -66,6 +68,12 @@ const nav: NavItem[] = [
     legacyPage: "templates",
   },
   {
+    label: "Control Documental",
+    to: "/control-documental",
+    icon: ClipboardCheck,
+    legacyPage: "control-documental",
+  },
+  {
     label: "Audit Trail",
     to: "/auditoria",
     icon: History,
@@ -86,7 +94,7 @@ const nav: NavItem[] = [
 ];
 
 /** Pages the "Lector" role cannot access (legacy js/navigation.js). */
-const lectorRestricted = new Set(["edit", "templates", "audit", "config"]);
+const lectorRestricted = new Set(["edit", "templates", "audit", "config", "control-documental"]);
 
 const COLLAPSED_STORAGE_KEY = "solinal-gestiona:sidebar-collapsed";
 
@@ -146,17 +154,15 @@ export function Sidebar() {
           collapsed ? "w-[76px] px-2.5" : "w-[264px] px-6",
         )}
       >
-        <div className={cn("flex items-center gap-3", collapsed ? "justify-center px-0" : "px-2")}>
-          <img src={logoIcon} alt="" className="size-8 shrink-0 object-contain" />
-          {!collapsed && (
-            <div className="min-w-0 flex-1 leading-none">
-              <p className="truncate text-xl font-bold tracking-tight">
-                SOLINAL<span className="text-sidebar-primary">.</span>
-              </p>
-              <p className="truncate text-xs font-medium text-sidebar-foreground/70">
-                Gestiona MVP
-              </p>
-            </div>
+        <div className={cn("flex items-center", collapsed ? "justify-center px-0" : "px-2")}>
+          {collapsed ? (
+            <img src={logoIcon} alt="" className="size-8 shrink-0 object-contain" />
+          ) : (
+            <img
+              src={logoWordmark}
+              alt="Solinal. Gestiona AI"
+              className="h-8 w-auto max-w-full object-contain object-left"
+            />
           )}
         </div>
 
