@@ -1,11 +1,22 @@
+import { useMemo } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useDocumentTypes } from "@/lib/queries";
+import { buildDocumentTypeOptions } from "@/features/documents/controlConfigStore";
 import { useRequirementMapping } from "./useCompliance";
 import { statusLabel, statusSoftBg, statusText } from "./statusStyles";
 
 export function RequirementsGrid() {
   const requirements = useRequirementMapping();
+
+  // Same "Tipos de información documentada" catalog Crear Documento reads —
+  // rename a type in Control Documental and this grid's type badges follow.
+  const documentTypesQuery = useDocumentTypes();
+  const typeLabel = useMemo(() => {
+    const options = buildDocumentTypeOptions(documentTypesQuery.data);
+    return new Map(options.map((o) => [o.value, o.label]));
+  }, [documentTypesQuery.data]);
 
   return (
     <Card className="mt-4">
@@ -35,7 +46,7 @@ export function RequirementsGrid() {
                   {req.norma}
                 </Badge>
                 <Badge variant="outline" className="font-normal">
-                  {req.type}
+                  {typeLabel.get(req.type) ?? req.type}
                 </Badge>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{req.detail}</p>

@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
+import { documentTypesApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queries";
 import { saveControlCatalog } from "@/features/documents/controlConfigStore";
 
 /* ================================================================
@@ -921,6 +924,8 @@ function Hoja({ cfg, doc, secciones }) {
 
 export default function ControlDocumental() {
   const { state } = useAppState();
+  const queryClient = useQueryClient();
+  const [guardando, setGuardando] = useState(false);
   const [cfg, setCfg] = useState(DEFAULT);
   const [tab, setTab] = useState("normas");
   const [tipoSel, setTipoSel] = useState("PRO");
@@ -937,6 +942,38 @@ export default function ControlDocumental() {
     o[k[k.length - 1]] = value; return n;
   });
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2800); };
+
+  /**
+   * "Tipos de información documentada" is now a real backend table
+   * (DocumentTypeCatalog, see backend/NOTES.md § 17) instead of
+   * localStorage — Crear Documento and Cumplimiento ISO both read it
+   * live via `useDocumentTypes()`. "Procesos y áreas" stays
+   * localStorage-only for now (saveControlCatalog), unrelated to this
+   * change.
+   */
+  async function handleGuardarConfiguracion() {
+    setGuardando(true);
+    try {
+      await documentTypesApi.save(
+        cfg.tipos.map((t, i) => ({
+          sigla: t.s,
+          nombre: t.n,
+          nivel: t.nivel,
+          digitos: t.digitos,
+          retencion: t.ret,
+          firma: t.firma,
+          orden: i,
+        })),
+      );
+      await queryClient.invalidateQueries({ queryKey: queryKeys.documentTypes });
+      saveControlCatalog({ procesos: cfg.procesos.map((p) => ({ s: p.s, n: p.n })) });
+      flash("Configuración guardada y aplicada a la biblioteca documental.");
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "No se pudo guardar la configuración.");
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   /* ---- Motor: requisitos consolidados de las normas seleccionadas ---- */
   const requisitos = useMemo(() => {
@@ -1136,15 +1173,10 @@ export default function ControlDocumental() {
             <button className="btn" onClick={() => flash("Configuración restablecida a los valores sugeridos.")}>Restablecer</button>
             <button
               className="btn pri"
-              onClick={() => {
-                saveControlCatalog({
-                  tipos: cfg.tipos.map((t) => ({ s: t.s, n: t.n })),
-                  procesos: cfg.procesos.map((p) => ({ s: p.s, n: p.n })),
-                });
-                flash("Configuración guardada y aplicada a la biblioteca documental.");
-              }}
+              disabled={guardando}
+              onClick={handleGuardarConfiguracion}
             >
-              Guardar configuración
+              {guardando ? "Guardando…" : "Guardar configuración"}
             </button>
           </div>
         </header>

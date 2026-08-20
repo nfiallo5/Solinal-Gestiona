@@ -5,7 +5,12 @@ import { toast } from "sonner";
 
 import type { DocumentType } from "@/data/seed";
 import { documentsApi, type CreateDocumentInput } from "@/lib/api";
-import { invalidateAfterDocumentMutation, useDocuments, useTemplates } from "@/lib/queries";
+import {
+  invalidateAfterDocumentMutation,
+  useDocuments,
+  useDocumentTypes,
+  useTemplates,
+} from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -27,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { nextDocumentCode, normaOptions } from "./docStyles";
-import { getDocumentAreaOptions, getDocumentTypeOptions } from "./controlConfigStore";
+import { buildDocumentTypeOptions, getDocumentAreaOptions } from "./controlConfigStore";
 
 /** Port of legacy js/templates.js openCreateDoc / templateChanged / createDocument. */
 
@@ -62,11 +67,13 @@ export function CreateDocumentDialog({
   const templates = useTemplates().data ?? [];
   const documents = useDocuments().data ?? [];
 
-  // "Tipo documental" / "Área" options come from Control Documental's
-  // "Tipos y codificación" table (saved to localStorage from there) instead
-  // of a fixed list, falling back to the built-in defaults until an admin
-  // has saved a configuration.
-  const typeOptions = getDocumentTypeOptions();
+  // "Tipo documental" comes from Control Documental's "Tipos de información
+  // documentada" table — the real DocumentTypeCatalog backend table now,
+  // not localStorage — falling back to the built-in labels while the query
+  // is still loading. "Área" is still a separate, localStorage-only catalog
+  // (see controlConfigStore.ts).
+  const documentTypesQuery = useDocumentTypes();
+  const typeOptions = buildDocumentTypeOptions(documentTypesQuery.data);
   const areaOptions = getDocumentAreaOptions();
 
   useEffect(() => {

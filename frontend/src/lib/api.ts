@@ -143,7 +143,7 @@ export function remainingAttemptsOf(error: unknown): number | null {
 export type QueryParams = object;
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   query?: QueryParams;
   /** Skip the global 401/423 session teardown (used by the login call). */
@@ -576,4 +576,29 @@ export interface AuditFilters {
 export const auditApi = {
   list: (filters: AuditFilters = {}) =>
     request<AuditLogEntry[]>("/audit-logs", { query: filters }),
+};
+
+/** Mirrors the Prisma `DocumentTypeCatalog` row (backend/prisma/schema.prisma). */
+export interface DocumentTypeCatalogEntry {
+  sigla: string;
+  nombre: string;
+  nivel: number;
+  digitos: number;
+  retencion: string;
+  firma: boolean;
+  orden: number;
+}
+
+/**
+ * Control Documental's "Tipos de información documentada" table, now
+ * backend-persisted (`/document-types`) instead of one browser's
+ * localStorage. See backend/NOTES.md § 17: this only drives labels/metadata
+ * shown to the user — `SolinalDocument.type`/`DocumentTemplate.type` still
+ * use the fixed 5-value `DocumentType` enum.
+ */
+export const documentTypesApi = {
+  list: () => request<DocumentTypeCatalogEntry[]>("/document-types"),
+  /** Administrador only (enforced server-side). Replace-all semantics. */
+  save: (items: DocumentTypeCatalogEntry[]) =>
+    request<DocumentTypeCatalogEntry[]>("/document-types", { method: "PUT", body: items }),
 };

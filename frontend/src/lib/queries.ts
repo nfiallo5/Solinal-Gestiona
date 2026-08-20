@@ -14,6 +14,7 @@ import {
   authApi,
   configApi,
   documentsApi,
+  documentTypesApi,
   getToken,
   templatesApi,
   usersApi,
@@ -34,6 +35,7 @@ export const queryKeys = {
   comments: (code: string) => ["comments", code] as const,
   regulationAlert: (code: string) => ["regulationAlert", code] as const,
   templates: ["templates"] as const,
+  documentTypes: ["documentTypes"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
   auditLogs: (filters: AuditFilters = {}) => ["auditLogs", filters] as const,
@@ -83,6 +85,14 @@ export function useTemplates(enabled = true) {
   return useQuery({
     queryKey: queryKeys.templates,
     queryFn: () => templatesApi.list(),
+    enabled,
+  });
+}
+
+export function useDocumentTypes(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.documentTypes,
+    queryFn: () => documentTypesApi.list(),
     enabled,
   });
 }

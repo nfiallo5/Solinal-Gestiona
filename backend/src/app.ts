@@ -25,6 +25,7 @@ import { templatesRouter } from './routes/templates.js';
 import { auditLogsRouter } from './routes/auditLogs.js';
 import { documentWorkflowRouter } from './routes/documentWorkflow.js';
 import { regulationAlertsRouter } from './routes/regulationAlerts.js';
+import { documentTypesRouter } from './routes/documentTypes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -61,6 +62,7 @@ export function createApp(): Express {
   app.use('/config', configRouter);
   app.use('/audit-logs', auditLogsRouter);
   app.use('/regulation-alerts', regulationAlertsRouter);
+  app.use('/document-types', documentTypesRouter);
   // ===== END ROUTES ========================================================
 
   app.use(notFoundHandler);

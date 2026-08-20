@@ -34,6 +34,7 @@ import type {
   DocumentRevision,
   DocumentSignature,
   DocumentTemplate,
+  DocumentTypeCatalog,
   OrgConfig,
   Prisma,
   RegulationAlert,
@@ -187,6 +188,17 @@ export interface ScanImportDTO {
   createdAt: string;
 }
 
+/** Mirrors the Prisma `DocumentTypeCatalog` row — see NOTES.md § 17. */
+export interface DocumentTypeCatalogDTO {
+  sigla: string;
+  nombre: string;
+  nivel: number;
+  digitos: number;
+  retencion: string;
+  firma: boolean;
+  orden: number;
+}
+
 // ---------------------------------------------------------------------------
 // Serializers
 // ---------------------------------------------------------------------------
@@ -319,6 +331,18 @@ export function serializeScanImport(s: ScanImport): ScanImportDTO {
     payload: s.payload,
     createdBy: s.createdBy,
     createdAt: s.createdAt.toISOString(),
+  };
+}
+
+export function serializeDocumentTypeCatalog(t: DocumentTypeCatalog): DocumentTypeCatalogDTO {
+  return {
+    sigla: t.sigla,
+    nombre: t.nombre,
+    nivel: t.nivel,
+    digitos: t.digitos,
+    retencion: t.retencion,
+    firma: t.firma,
+    orden: t.orden,
   };
 }
 
