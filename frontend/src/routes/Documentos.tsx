@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CircleCheck, FileDown, FilePlus, FileText, LayoutGrid, ListFilter, Plus, SearchX } from "lucide-react";
+import { CircleCheck, FileDown, FilePlus, FileText, LayoutGrid, ListFilter, Plus, SearchX, Trash2 } from "lucide-react";
 
 import { useAppState } from "@/context/AppStateContext";
 import type { DocumentStatus, DocumentType } from "@/data/seed";
-import { useDocuments } from "@/lib/queries";
-import type { DocumentFilters } from "@/lib/api";
+import { ApiError, documentsApi, type DocumentFilters } from "@/lib/api";
+import { invalidateAfterDocumentMutation, useDocuments } from "@/lib/queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -38,6 +49,7 @@ type NormaFilter = "all" | (typeof normaOptions)[number];
 export default function Documentos() {
   const { state, dispatch } = useAppState();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -49,7 +61,24 @@ export default function Documentos() {
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [approvalCode, setApprovalCode] = useState<string | null>(null);
 
+  const [deleteCode, setDeleteCode] = useState<string | null>(null);
+
   const isLector = state.session.activeRole === "Lector";
+  const isAdmin = state.session.activeRole === "Administrador";
+
+  const deleteMutation = useMutation({
+    mutationFn: (code: string) => documentsApi.remove(code),
+    onSuccess: (_result, code) => {
+      invalidateAfterDocumentMutation(queryClient, code);
+      toast.success(`Documento ${code} eliminado.`);
+      setDeleteCode(null);
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof ApiError ? error.message : "No se pudo eliminar el documento.",
+      );
+    },
+  });
 
   // The four filters are now server-side query params (`GET /documents`), which
   // also scopes a Lector to `estado=Aprobado` on the API rather than trusting
@@ -268,6 +297,19 @@ export default function Documentos() {
                         <CircleCheck className="size-[15px]" />
                       </button>
                     )}
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        title="Eliminar documento"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteCode(d.code);
+                        }}
+                        className="flex size-7 items-center justify-center rounded-md text-status-danger transition-colors hover:bg-status-danger/10"
+                      >
+                        <Trash2 className="size-[15px]" />
+                      </button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -293,6 +335,31 @@ export default function Documentos() {
 
       <CreateDocumentDialog open={createOpen} onOpenChange={setCreateOpen} />
       <ApprovalFlowDialog open={approvalOpen} onOpenChange={setApprovalOpen} doc={approvalDoc} />
+
+      <AlertDialog open={deleteCode !== null} onOpenChange={(open) => !open && setDeleteCode(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar documento {deleteCode}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción borra el documento, sus firmas, revisiones y comentarios de forma
+              permanente. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteCode) deleteMutation.mutate(deleteCode);
+              }}
+              className="bg-status-danger text-white hover:bg-status-danger/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

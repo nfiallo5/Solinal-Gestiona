@@ -433,6 +433,11 @@ export const documentsApi = {
     );
   },
 
+  /** Administrador only (enforced server-side). */
+  async remove(code: string): Promise<void> {
+    await request<void>(`/documents/${encodeURIComponent(code)}`, { method: "DELETE" });
+  },
+
   /** Oldest-first, matching the order `CommentsThread` renders. */
   listComments: (code: string) =>
     request<Array<DocumentComment & { id: number }>>(

@@ -324,6 +324,29 @@ documentsRouter.patch(
 );
 
 // ---------------------------------------------------------------------------
+// DELETE /documents/:code — Administrador only
+// ---------------------------------------------------------------------------
+
+documentsRouter.delete(
+  '/:code',
+  requireAuth,
+  requireRole('Administrador'),
+  validate({ params: zCodeParams }),
+  asyncHandler(async (req, res) => {
+    const { code } = req.params as z.infer<typeof zCodeParams>;
+    await assertDocumentExists(code);
+
+    await prisma.$transaction(async (tx) => {
+      // Signatures/revisions/comments/scanImports cascade via the FK.
+      await tx.document.delete({ where: { code } });
+      await writeAudit(req, `Eliminó el documento ${code}`, { tx });
+    });
+
+    res.status(204).send();
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // Comments — port of ADD_COMMENT / Editor.tsx#handleAddComment
 // ---------------------------------------------------------------------------
 
