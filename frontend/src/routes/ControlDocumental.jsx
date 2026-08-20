@@ -590,7 +590,7 @@ const TOKENS = {
   TIPO: { label: "Tipo documental", sample: () => "PRO" },
   PROCESO: { label: "Proceso", sample: () => "CAL" },
   CORRELATIVO: { label: "Correlativo", sample: (c) => "1".padStart(c.cod.digitos, "0") },
-  ANIO: { label: "Año", sample: () => "2026" },
+  ANIO: { label: "Año", sample: (c) => c.cod.formatoAnio === "26" ? "26" : "2026" },
   VERSION: { label: "Versión", sample: (c) => c.cod.prefijoVer + fmtVersion(c.ver.esquema, 3) },
 };
 
@@ -621,7 +621,7 @@ const DEFAULT = {
     leyenda: "“COPIA NO CONTROLADA”: el departamento de Calidad no garantiza que esta impresión sea la última versión del documento.",
     qr: true, hash: false, impresion: true, mostrarCargo: true, mostrarFecha: true,
   },
-  cod: { tokens: ["TIPO", "PROCESO", "CORRELATIVO", "VERSION"], separador: "-", digitos: 3, prefijoVer: "V", unico: true, hereda: true },
+  cod: { tokens: ["TIPO", "PROCESO", "CORRELATIVO", "VERSION"], separador: "-", digitos: 3, prefijoVer: "V", formatoAnio: "26", unico: true, hereda: true },
   tipos: TIPOS_INI,
   procesos: PROCESOS_INI,
   estructuras: Object.fromEntries(Object.entries(ESTRUCTURAS_INI).map(([k, v]) => [k, v.map((n) => ({ n, on: true }))])),
@@ -1134,7 +1134,6 @@ export default function ControlDocumental() {
           <div className="actions">
             <button className="btn" onClick={() => flash("Configuración restablecida a los valores sugeridos.")}>Restablecer</button>
             <button className="btn pri" onClick={() => flash("Configuración guardada y aplicada a la biblioteca documental.")}>Guardar configuración</button>
-            <button className="bell" aria-label="Notificaciones">🔔</button>
           </div>
         </header>
         <div className="rule" />
@@ -1367,14 +1366,26 @@ export default function ControlDocumental() {
                   </Field>
                 )}
               </div>
-              {/* Igual: los dígitos del correlativo no aplican si CORRELATIVO
-                  no está en el código. */}
-              {cfg.cod.tokens.includes("CORRELATIVO") && (
-                <Field label="Dígitos del correlativo" hint="Cada tipo documental puede sobrescribir este valor en la tabla siguiente.">
-                  <select className="sel" value={cfg.cod.digitos} onChange={(e) => up("cod.digitos", Number(e.target.value))}>
-                    {[2, 3, 4].map((d) => <option key={d} value={d}>{d} dígitos · {"1".padStart(d, "0")}</option>)}
-                  </select>
-                </Field>
+              {/* Igual: los dígitos del correlativo y el formato de año no
+                  aplican si su token no está en el código. */}
+              {(cfg.cod.tokens.includes("CORRELATIVO") || cfg.cod.tokens.includes("ANIO")) && (
+                <div className="row2">
+                  {cfg.cod.tokens.includes("CORRELATIVO") && (
+                    <Field label="Dígitos del correlativo" hint="Cada tipo documental puede sobrescribir este valor en la tabla siguiente.">
+                      <select className="sel" value={cfg.cod.digitos} onChange={(e) => up("cod.digitos", Number(e.target.value))}>
+                        {[2, 3, 4].map((d) => <option key={d} value={d}>{d} dígitos · {"1".padStart(d, "0")}</option>)}
+                      </select>
+                    </Field>
+                  )}
+                  {cfg.cod.tokens.includes("ANIO") && (
+                    <Field label="Año" hint="Formato del bloque de año dentro del código.">
+                      <select className="sel" value={cfg.cod.formatoAnio} onChange={(e) => up("cod.formatoAnio", e.target.value)}>
+                        <option value="2026">Completo · 2026</option>
+                        <option value="26">Corto · 26</option>
+                      </select>
+                    </Field>
+                  )}
+                </div>
               )}
               <div className="result">
                 <small>Código generado</small>
@@ -1494,7 +1505,6 @@ export default function ControlDocumental() {
           <div className="cdgrid">
             <div>
               <div className="card">
-                <span className="eyebrow">7.5.2 a) y b) · metadatos documentales</span>
                 <h3>Plantilla de encabezado</h3>
                 <p className="hint">El encabezado transporta los metadatos que identifican el documento. Es distinto de la estructura de capítulos, que se define por tipo documental.</p>
                 <div className="picker">
