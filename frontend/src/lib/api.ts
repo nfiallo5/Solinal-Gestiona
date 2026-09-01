@@ -602,3 +602,33 @@ export const documentTypesApi = {
   save: (items: DocumentTypeCatalogEntry[]) =>
     request<DocumentTypeCatalogEntry[]>("/document-types", { method: "PUT", body: items }),
 };
+
+/** One of the 6 segment kinds the "Regla de codificación" builder combines
+ * — matches `CODING_TOKENS` in backend/src/lib/documentCode.ts. */
+export type CodingToken = "SIGLA" | "TIPO" | "PROCESO" | "CORRELATIVO" | "ANIO" | "VERSION";
+
+/** Mirrors the Prisma `CodingRule` singleton row (backend/prisma/schema.prisma). */
+export interface CodingRuleDTO {
+  tokens: CodingToken[];
+  separador: string;
+  digitos: number;
+  prefijoVer: string;
+  formatoAnio: string;
+  empresaSigla: string;
+  unico: boolean;
+  hereda: boolean;
+}
+
+/**
+ * Control Documental's "Regla de codificación" card (the "Tipos y
+ * codificación" tab), backend-persisted (`/coding-rule`). This is what
+ * `POST /documents` actually reads to generate a new document's `code` —
+ * see `nextDocumentCode` in `backend/src/lib/documentCode.ts` and the
+ * frontend's mirror in `features/documents/docStyles.ts`.
+ */
+export const codingRuleApi = {
+  get: () => request<CodingRuleDTO>("/coding-rule"),
+  /** Administrador only (enforced server-side). */
+  save: (rule: CodingRuleDTO) =>
+    request<CodingRuleDTO>("/coding-rule", { method: "PUT", body: rule }),
+};

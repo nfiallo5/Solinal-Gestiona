@@ -7,6 +7,7 @@ import type { DocumentType } from "@/data/seed";
 import { documentsApi, type CreateDocumentInput } from "@/lib/api";
 import {
   invalidateAfterDocumentMutation,
+  useCodingRule,
   useDocuments,
   useDocumentTypes,
   useTemplates,
@@ -31,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { nextDocumentCode, normaOptions } from "./docStyles";
+import { DEFAULT_CODING_RULE, nextDocumentCode, normaOptions } from "./docStyles";
 import { buildDocumentTypeOptions, getDocumentAreaOptions } from "./controlConfigStore";
 
 /** Port of legacy js/templates.js openCreateDoc / templateChanged / createDocument. */
@@ -76,6 +77,12 @@ export function CreateDocumentDialog({
   const typeOptions = buildDocumentTypeOptions(documentTypesQuery.data);
   const areaOptions = getDocumentAreaOptions();
 
+  // Control Documental's saved "Regla de codificación" — the same rule
+  // POST /documents applies server-side, so this preview and the code the
+  // document actually gets created with always match.
+  const codingRuleQuery = useCodingRule();
+  const codingRule = codingRuleQuery.data ?? DEFAULT_CODING_RULE;
+
   useEffect(() => {
     if (!open) return;
     const preset = initialTemplateKey
@@ -109,8 +116,9 @@ export function CreateDocumentDialog({
     : undefined;
 
   // Preview only — the real control code is generated server-side by
-  // `POST /documents` (same TIPO-AREA-NNN rule, ported to backend/src/lib).
-  const previewCode = nextDocumentCode(form.type, form.area, documents);
+  // `POST /documents`, using the exact same saved coding rule (see
+  // `nextDocumentCode` in backend/src/lib/documentCode.ts).
+  const previewCode = nextDocumentCode(codingRule, form.type, form.area, documents);
 
   const createMutation = useMutation({
     mutationFn: (input: CreateDocumentInput) => documentsApi.create(input),
