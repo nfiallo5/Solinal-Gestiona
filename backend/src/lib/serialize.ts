@@ -29,6 +29,7 @@
  */
 import type {
   AuditLogEntry,
+  CodingRule,
   Document,
   DocumentComment,
   DocumentRevision,
@@ -199,6 +200,18 @@ export interface DocumentTypeCatalogDTO {
   orden: number;
 }
 
+/** Mirrors the Prisma `CodingRule` singleton row — see documentCode.ts. */
+export interface CodingRuleDTO {
+  tokens: string[];
+  separador: string;
+  digitos: number;
+  prefijoVer: string;
+  formatoAnio: string;
+  empresaSigla: string;
+  unico: boolean;
+  hereda: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Serializers
 // ---------------------------------------------------------------------------
@@ -343,6 +356,19 @@ export function serializeDocumentTypeCatalog(t: DocumentTypeCatalog): DocumentTy
     retencion: t.retencion,
     firma: t.firma,
     orden: t.orden,
+  };
+}
+
+export function serializeCodingRule(r: CodingRule): CodingRuleDTO {
+  return {
+    tokens: r.tokens,
+    separador: r.separador,
+    digitos: r.digitos,
+    prefijoVer: r.prefijoVer,
+    formatoAnio: r.formatoAnio,
+    empresaSigla: r.empresaSigla,
+    unico: r.unico,
+    hereda: r.hereda,
   };
 }
 

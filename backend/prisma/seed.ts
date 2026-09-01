@@ -554,6 +554,27 @@ async function main(): Promise<void> {
   });
   console.log('  org config:       1');
 
+  // --- Coding rule ---------------------------------------------------------
+  // Matches today's actual TIPO-AREA-NNN document codes exactly, so seeding
+  // this row changes nothing until an Administrador edits the rule from
+  // Control Documental's "Tipos y codificación" tab.
+  const seedCodingRule = {
+    tokens: ['TIPO', 'PROCESO', 'CORRELATIVO'],
+    separador: '-',
+    digitos: 3,
+    prefijoVer: 'V',
+    formatoAnio: '26',
+    empresaSigla: 'SOL',
+    unico: true,
+    hereda: true,
+  };
+  await prisma.codingRule.upsert({
+    where: { id: 1 },
+    create: { id: 1, ...seedCodingRule },
+    update: seedCodingRule,
+  });
+  console.log('  coding rule:      1');
+
   // --- Regulation alert ---------------------------------------------------
   // Replaces the hardcoded consts in src/features/editor/aiEngine.ts.
   await prisma.regulationAlert.upsert({

@@ -12,6 +12,7 @@ import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-quer
 import {
   auditApi,
   authApi,
+  codingRuleApi,
   configApi,
   documentsApi,
   documentTypesApi,
@@ -36,6 +37,7 @@ export const queryKeys = {
   regulationAlert: (code: string) => ["regulationAlert", code] as const,
   templates: ["templates"] as const,
   documentTypes: ["documentTypes"] as const,
+  codingRule: ["codingRule"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
   auditLogs: (filters: AuditFilters = {}) => ["auditLogs", filters] as const,
@@ -93,6 +95,17 @@ export function useDocumentTypes(enabled = true) {
   return useQuery({
     queryKey: queryKeys.documentTypes,
     queryFn: () => documentTypesApi.list(),
+    enabled,
+  });
+}
+
+/** Control Documental's saved "Regla de codificación" — the same rule
+ * `POST /documents` uses server-side, so a document-creation preview built
+ * from this hook always matches the code the backend will actually assign. */
+export function useCodingRule(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.codingRule,
+    queryFn: () => codingRuleApi.get(),
     enabled,
   });
 }

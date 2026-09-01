@@ -358,6 +358,49 @@ model OrgConfig {
   updatedAt        DateTime       @updatedAt
 }
 
+/// Singleton row (`id = 1`) backing Control Documental's "Regla de
+/// codificación" builder (tab "Tipos y codificación"). This is the single
+/// source of truth `src/lib/documentCode.ts` reads to generate every new
+/// document's `code` — editing it here is what makes a saved rule actually
+/// change the codes `POST /documents` produces, not just the mock preview
+/// on the Control Documental page.
+model CodingRule {
+  id Int @id @default(1)
+
+  /// Ordered list of code segments, each one of SIGLA / TIPO / PROCESO /
+  /// CORRELATIVO / ANIO / VERSION (see `CODING_TOKENS` in documentCode.ts).
+  /// No duplicates; must include CORRELATIVO — enforced by the route's zod
+  /// schema, not here, since Postgres string arrays can't carry that
+  /// constraint.
+  tokens String[] @default(["TIPO", "PROCESO", "CORRELATIVO"])
+
+  /// Segment separator: "-", ".", ":", "_", or "ninguno" (no separator).
+  separador String @default("-")
+
+  /// Zero-padding width of the CORRELATIVO segment, e.g. 3 -> "007".
+  digitos Int @default(3)
+
+  /// Prefix before the version number in the VERSION segment, e.g.
+  /// "V" -> "V01". Empty string means no prefix.
+  prefijoVer String @default("V")
+
+  /// "26" (2-digit) or "2026" (4-digit) — format of the ANIO segment.
+  formatoAnio String @default("26")
+
+  /// Company acronym the SIGLA segment resolves to, e.g. "SOL".
+  empresaSigla String @default("SOL")
+
+  /// UI-only flags from the same "Regla de codificación" card — surfaced in
+  /// the ISO-compliance checklist on Control Documental, not yet enforced
+  /// as separate server-side behavior beyond what CORRELATIVO already
+  /// guarantees (a code is never reassigned once used, since it's the
+  /// Document primary key).
+  unico  Boolean @default(true)
+  hereda Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Auth / lockout
 // ---------------------------------------------------------------------------

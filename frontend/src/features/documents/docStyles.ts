@@ -29,6 +29,7 @@
  *                    src/styles.css, for consistency with the other 4.
  */
 import type { DocumentStatus, DocumentType, SolinalDocument, TemplateLevel } from "@/data/seed";
+import type { CodingRuleDTO } from "@/lib/api";
 
 /** Un Registro (ej. un Checklist ya firmado) es evidencia congelada: una
  * vez firmado no debería poder editarse. Se deriva de `nivel` en vez de
@@ -116,19 +117,86 @@ export function areaFromCode(code: string): DocumentArea | undefined {
   return documentAreas.find((a) => a.code === areaCode);
 }
 
-/** Next sequential code for a TIPO-AREA pair, e.g. nextDocumentCode("Procedimiento", "CAL", docs) -> "PRO-CAL-010". */
+/**
+ * Coding-rule engine — mirrors `backend/src/lib/documentCode.ts` exactly, so
+ * this preview always matches the code `POST /documents` will actually
+ * assign. The rule itself comes from Control Documental's "Regla de
+ * codificación" card, persisted via `/coding-rule` (see `useCodingRule()`
+ * in `@/lib/queries` and `CodingRuleDTO` in `@/lib/api`).
+ */
+
+/** Matches today's actual TIPO-AREA-NNN codes exactly — used only while
+ * `useCodingRule()` hasn't resolved yet. */
+export const DEFAULT_CODING_RULE: CodingRuleDTO = {
+  tokens: ["TIPO", "PROCESO", "CORRELATIVO"],
+  separador: "-",
+  digitos: 3,
+  prefijoVer: "V",
+  formatoAnio: "26",
+  empresaSigla: "SOL",
+  unico: true,
+  hereda: true,
+};
+
+interface TokenContext {
+  type: DocumentType;
+  areaCode: string;
+  year: number;
+}
+
+function tokenValue(token: string, rule: CodingRuleDTO, ctx: TokenContext): string {
+  switch (token) {
+    case "SIGLA":
+      return rule.empresaSigla;
+    case "TIPO":
+      return documentTypeAbbr[ctx.type];
+    case "PROCESO":
+      return ctx.areaCode;
+    case "ANIO":
+      return rule.formatoAnio === "2026" ? String(ctx.year) : String(ctx.year).slice(-2);
+    case "VERSION":
+      // A newly created document always starts at version 1.
+      return `${rule.prefijoVer}01`;
+    default:
+      return "";
+  }
+}
+
+/** Placeholder for CORRELATIVO while templating — see the identical
+ * technique (and rationale) in the backend's `documentCode.ts`. */
+const CORRELATIVO_MARK = "\u0000";
+
+function splitAroundCorrelativo(
+  rule: CodingRuleDTO,
+  ctx: TokenContext,
+): { prefix: string; suffix: string } {
+  const sep = rule.separador === "ninguno" ? "" : rule.separador;
+  const templated = rule.tokens
+    .map((t) => (t === "CORRELATIVO" ? CORRELATIVO_MARK : tokenValue(t, rule, ctx)))
+    .join(sep);
+  const idx = templated.indexOf(CORRELATIVO_MARK);
+  if (idx === -1) return { prefix: templated, suffix: "" };
+  return { prefix: templated.slice(0, idx), suffix: templated.slice(idx + 1) };
+}
+
+/** Next sequential code under `rule` for a (type, area) pair, e.g.
+ * nextDocumentCode(rule, "Procedimiento", "CAL", docs) -> "PRO-CAL-010". */
 export function nextDocumentCode(
+  rule: CodingRuleDTO,
   type: DocumentType,
   areaCode: string,
   existingDocs: SolinalDocument[],
+  year: number = new Date().getFullYear(),
 ): string {
-  const prefix = `${documentTypeAbbr[type]}-${areaCode}-`;
+  const { prefix, suffix } = splitAroundCorrelativo(rule, { type, areaCode, year });
   let max = 0;
   for (const doc of existingDocs) {
-    if (doc.code.startsWith(prefix)) {
-      const n = parseInt(doc.code.slice(prefix.length), 10);
-      if (!Number.isNaN(n) && n > max) max = n;
-    }
+    const code = doc.code;
+    if (code.length < prefix.length + suffix.length) continue;
+    if (!code.startsWith(prefix) || !code.endsWith(suffix)) continue;
+    const numPart = code.slice(prefix.length, code.length - suffix.length);
+    const n = Number.parseInt(numPart, 10);
+    if (!Number.isNaN(n) && n > max) max = n;
   }
-  return `${prefix}${String(max + 1).padStart(3, "0")}`;
+  return `${prefix}${String(max + 1).padStart(rule.digitos, "0")}${suffix}`;
 }

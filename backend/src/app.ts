@@ -27,6 +27,7 @@ import { documentWorkflowRouter } from './routes/documentWorkflow.js';
 import { regulationAlertsRouter } from './routes/regulationAlerts.js';
 import { documentTypesRouter } from './routes/documentTypes.js';
 import { aiRouter } from './routes/ai.js';
+import { codingRuleRouter } from './routes/codingRule.js';
 
 export function createApp(): Express {
   const app = express();
@@ -68,6 +69,7 @@ export function createApp(): Express {
   app.use('/audit-logs', auditLogsRouter);
   app.use('/regulation-alerts', regulationAlertsRouter);
   app.use('/document-types', documentTypesRouter);
+  app.use('/coding-rule', codingRuleRouter);
   // ===== END ROUTES ========================================================
 
   app.use(notFoundHandler);

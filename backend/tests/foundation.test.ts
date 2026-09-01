@@ -10,7 +10,7 @@ import { createApp } from '../src/app.js';
 import { disconnectPrisma, prisma } from '../src/prisma.js';
 import { documentInclude, serializeDocument, serializeTemplate } from '../src/lib/serialize.js';
 import { ESTADO_FROM_WIRE, ESTADO_TO_WIRE, PERIODICIDAD_TO_WIRE } from '../src/lib/enums.js';
-import { nextDocumentCodeFrom } from '../src/lib/documentCode.js';
+import { DEFAULT_CODING_RULE, nextDocumentCodeFrom } from '../src/lib/documentCode.js';
 
 const app = createApp();
 
@@ -43,11 +43,14 @@ describe('enum wire mapping', () => {
 });
 
 describe('documentCode', () => {
-  it('reproduces the frontend rule', () => {
-    expect(nextDocumentCodeFrom('Procedimiento', 'CAL', ['PRO-CAL-009', 'POL-GER-003'])).toBe(
-      'PRO-CAL-010',
-    );
-    expect(nextDocumentCodeFrom('Checklist', 'HAC', [])).toBe('CHK-HAC-001');
+  it('reproduces the frontend rule under the default coding rule', () => {
+    expect(
+      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Procedimiento', 'CAL', [
+        'PRO-CAL-009',
+        'POL-GER-003',
+      ]),
+    ).toBe('PRO-CAL-010');
+    expect(nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Checklist', 'HAC', [])).toBe('CHK-HAC-001');
   });
 });
 

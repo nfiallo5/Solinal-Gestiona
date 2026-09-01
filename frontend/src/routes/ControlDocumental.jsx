@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
-import { documentTypesApi } from "@/lib/api";
-import { queryKeys } from "@/lib/queries";
+import { codingRuleApi, documentTypesApi } from "@/lib/api";
+import { queryKeys, useCodingRule } from "@/lib/queries";
 import { saveControlCatalog } from "@/features/documents/controlConfigStore";
 
 /* ================================================================
@@ -944,6 +944,39 @@ export default function ControlDocumental() {
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2800); };
 
   /**
+   * "Regla de codificación" (`cfg.cod` + the company's `cfg.empresa.sigla`,
+   * which the SIGLA token reads) is backend-persisted via `/coding-rule` —
+   * it's the same rule `POST /documents` uses to generate a new document's
+   * `code`, and what `CreateDocumentDialog`'s preview reads through
+   * `useCodingRule()`. `DEFAULT.cod` above only seeds this component's
+   * state before the first fetch resolves; once it does, the saved rule
+   * takes over so the builder reflects what documents are actually getting
+   * coded with, not a hardcoded default. Applied once (`appliedServerRule`)
+   * so a background refetch never clobbers an edit in progress.
+   */
+  const codingRuleQuery = useCodingRule();
+  const appliedServerRule = useRef(false);
+  useEffect(() => {
+    const rule = codingRuleQuery.data;
+    if (!rule || appliedServerRule.current) return;
+    appliedServerRule.current = true;
+    setCfg((c) => ({
+      ...c,
+      cod: {
+        ...c.cod,
+        tokens: rule.tokens,
+        separador: rule.separador,
+        digitos: rule.digitos,
+        prefijoVer: rule.prefijoVer,
+        formatoAnio: rule.formatoAnio,
+        unico: rule.unico,
+        hereda: rule.hereda,
+      },
+      empresa: { ...c.empresa, sigla: rule.empresaSigla },
+    }));
+  }, [codingRuleQuery.data]);
+
+  /**
    * "Tipos de información documentada" is now a real backend table
    * (DocumentTypeCatalog, see backend/NOTES.md § 17) instead of
    * localStorage — Crear Documento and Cumplimiento ISO both read it
@@ -966,6 +999,20 @@ export default function ControlDocumental() {
         })),
       );
       await queryClient.invalidateQueries({ queryKey: queryKeys.documentTypes });
+      // Persists the coding rule server-side — this is what makes an edit
+      // here actually apply to the next document's code, in Crear
+      // Documento's preview and in what POST /documents assigns.
+      await codingRuleApi.save({
+        tokens: cfg.cod.tokens,
+        separador: cfg.cod.separador,
+        digitos: cfg.cod.digitos,
+        prefijoVer: cfg.cod.prefijoVer,
+        formatoAnio: cfg.cod.formatoAnio,
+        empresaSigla: cfg.empresa.sigla,
+        unico: cfg.cod.unico,
+        hereda: cfg.cod.hereda,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.codingRule });
       saveControlCatalog({ procesos: cfg.procesos.map((p) => ({ s: p.s, n: p.n })) });
       flash("Configuración guardada y aplicada a la biblioteca documental.");
     } catch (err) {
