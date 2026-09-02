@@ -24,7 +24,8 @@ import {
 import type { DocumentComment, RoleName, SolinalDocument } from "@/data/seed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { documentTypeAbbr, statusLabel } from "@/features/documents/docStyles";
+import { statusLabel, typeSigla } from "@/features/documents/docStyles";
+import { useDocumentTypes } from "@/lib/queries";
 import { CommentsThread } from "./CommentsThread";
 import { LockedSection } from "./LockedSection";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -133,6 +134,9 @@ export const ContentEditor = forwardRef<ContentEditorHandle, ContentEditorProps>
 ) {
   const isOwner = activeUser === doc.creador || activeRole === "Administrador";
   const bodyRef = useRef<HTMLDivElement>(null);
+  // For the header's sigla box: resolve the type name to its code sigla via
+  // the "Tipos de información documentada" catalog (doc.type is free text).
+  const docTypeCatalog = useDocumentTypes().data;
 
   useImperativeHandle(ref, () => ({
     captureSelectionHtml() {
@@ -252,7 +256,7 @@ export const ContentEditor = forwardRef<ContentEditorHandle, ContentEditorProps>
                     className="w-[92px] border border-neutral-800 p-2 text-center align-middle"
                   >
                     <div className="mx-auto flex size-11 items-center justify-center rounded-md bg-navy text-xs font-bold text-navy-foreground">
-                      {documentTypeAbbr[doc.type]}
+                      {typeSigla(doc.type, docTypeCatalog)}
                     </div>
                   </td>
                   <td rowSpan={2} className="border border-neutral-800 p-2.5 align-middle">

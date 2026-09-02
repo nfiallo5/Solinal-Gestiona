@@ -15,11 +15,11 @@ import {
 
 describe('nextDocumentCodeFrom', () => {
   it('matches the default TIPO-AREA-NNN shape', () => {
-    expect(nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Procedimiento', 'CAL', [])).toBe(
+    expect(nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'PRO', 'CAL', [])).toBe(
       'PRO-CAL-001',
     );
     expect(
-      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Procedimiento', 'CAL', [
+      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'PRO', 'CAL', [
         'PRO-CAL-009',
         'POL-GER-003',
       ]),
@@ -35,18 +35,18 @@ describe('nextDocumentCodeFrom', () => {
       formatoAnio: '26',
       empresaSigla: 'SOL',
     };
-    expect(nextDocumentCodeFrom(rule, 'Checklist', 'HAC', [])).toBe('CHK.HAC.0001');
-    expect(nextDocumentCodeFrom(rule, 'Checklist', 'HAC', ['CHK.HAC.0001'])).toBe('CHK.HAC.0002');
+    expect(nextDocumentCodeFrom(rule, 'CHK', 'HAC', [])).toBe('CHK.HAC.0001');
+    expect(nextDocumentCodeFrom(rule, 'CHK', 'HAC', ['CHK.HAC.0001'])).toBe('CHK.HAC.0002');
   });
 
   it('supports "ninguno" (no separator)', () => {
     const rule: CodingRuleShape = { ...DEFAULT_CODING_RULE, separador: 'ninguno' };
-    expect(nextDocumentCodeFrom(rule, 'Manual', 'GER', [])).toBe('MANGER001');
+    expect(nextDocumentCodeFrom(rule, 'MAN', 'GER', [])).toBe('MANGER001');
   });
 
   it('honors a reordered token list, e.g. CORRELATIVO before TIPO/PROCESO', () => {
     const rule: CodingRuleShape = { ...DEFAULT_CODING_RULE, tokens: ['CORRELATIVO', 'TIPO', 'PROCESO'] };
-    expect(nextDocumentCodeFrom(rule, 'Instructivo', 'PRD', ['001-INS-PRD'])).toBe('002-INS-PRD');
+    expect(nextDocumentCodeFrom(rule, 'INS', 'PRD', ['001-INS-PRD'])).toBe('002-INS-PRD');
   });
 
   it('includes SIGLA when present', () => {
@@ -55,7 +55,7 @@ describe('nextDocumentCodeFrom', () => {
       tokens: ['SIGLA', 'TIPO', 'PROCESO', 'CORRELATIVO'],
       empresaSigla: 'SOL',
     };
-    expect(nextDocumentCodeFrom(rule, 'Política', 'GER', [])).toBe('SOL-POL-GER-001');
+    expect(nextDocumentCodeFrom(rule, 'POL', 'GER', [])).toBe('SOL-POL-GER-001');
   });
 
   it('formats ANIO short and long', () => {
@@ -63,12 +63,12 @@ describe('nextDocumentCodeFrom', () => {
       ...DEFAULT_CODING_RULE,
       tokens: ['TIPO', 'PROCESO', 'ANIO', 'CORRELATIVO'],
     };
-    expect(nextDocumentCodeFrom(shortYear, 'Procedimiento', 'CAL', [], 2026)).toBe(
+    expect(nextDocumentCodeFrom(shortYear, 'PRO', 'CAL', [], 2026)).toBe(
       'PRO-CAL-26-001',
     );
 
     const longYear: CodingRuleShape = { ...shortYear, formatoAnio: '2026' };
-    expect(nextDocumentCodeFrom(longYear, 'Procedimiento', 'CAL', [], 2026)).toBe(
+    expect(nextDocumentCodeFrom(longYear, 'PRO', 'CAL', [], 2026)).toBe(
       'PRO-CAL-2026-001',
     );
   });
@@ -79,14 +79,14 @@ describe('nextDocumentCodeFrom', () => {
       tokens: ['TIPO', 'PROCESO', 'CORRELATIVO', 'VERSION'],
       prefijoVer: 'Rev.',
     };
-    expect(nextDocumentCodeFrom(rule, 'Procedimiento', 'CAL', [])).toBe('PRO-CAL-001-Rev.01');
+    expect(nextDocumentCodeFrom(rule, 'PRO', 'CAL', [])).toBe('PRO-CAL-001-Rev.01');
   });
 
   it('only counts codes matching the current fixed prefix/suffix for the series', () => {
     // A "PRO-CAL-*" correlativo series must not be bumped by an unrelated
     // "POL-GER-*" code, nor by a same-series code from a different area.
     expect(
-      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Procedimiento', 'CAL', [
+      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'PRO', 'CAL', [
         'PRO-CAL-005',
         'PRO-GER-099',
         'POL-CAL-777',
@@ -97,6 +97,6 @@ describe('nextDocumentCodeFrom', () => {
 
 describe('buildDocumentCode', () => {
   it('builds a specific correlativo without scanning existing codes', () => {
-    expect(buildDocumentCode(DEFAULT_CODING_RULE, 'Manual', 'GER', 7)).toBe('MAN-GER-007');
+    expect(buildDocumentCode(DEFAULT_CODING_RULE, 'MAN', 'GER', 7)).toBe('MAN-GER-007');
   });
 });

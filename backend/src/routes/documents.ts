@@ -32,11 +32,16 @@ import {
 import {
   DocumentStatus,
   fromWireEstado,
-  zDocumentType,
+  zDocumentTypeFree,
   zEstadoWire,
   type EstadoWire,
 } from '../lib/enums.js';
-import { assertAreaExists, createWithGeneratedCode, zAreaCode } from '../lib/documentCode.js';
+import {
+  assertAreaExists,
+  assertTypeExists,
+  createWithGeneratedCode,
+  zAreaCode,
+} from '../lib/documentCode.js';
 
 export const documentsRouter: Router = Router();
 
@@ -64,7 +69,7 @@ const zBooleanFlag = z
 const zListQuery = z.object({
   /** `Borrador | En aprobación | Aprobado | Rechazado | Vencido` (see above). */
   estado: zEstadoFilter.optional(),
-  type: zDocumentType.optional(),
+  type: zDocumentTypeFree.optional(),
   norma: z.string().trim().min(1).optional(),
   vencido: zBooleanFlag.optional(),
   critico: zBooleanFlag.optional(),
@@ -148,8 +153,11 @@ const zCreateBody = z.object({
   /** `key` of the originating template. Omit / null for a blank document. */
   templateKey: z.string().trim().min(1).nullish(),
   title: z.string().trim().min(1, 'El título es necesario.'),
-  type: zDocumentType,
-  /** 3-letter department code — the middle segment of the control code. */
+  /** Free text — any `nombre` from the `DocumentTypeCatalog` catalog, not
+   * just the 5 `DocumentType` enum values. Checked by `assertTypeExists`. */
+  type: zDocumentTypeFree,
+  /** Department code — the PROCESO segment of the control code. Checked by
+   * `assertAreaExists` against the `ProcessArea` catalog. */
   area: zAreaCode,
   norma: z.string().trim().min(1),
   /**
@@ -175,9 +183,10 @@ documentsRouter.post(
     const body = req.body as z.infer<typeof zCreateBody>;
     const user = getAuthUser(req);
 
-    // `area` is validated for shape by `zAreaCode`; this checks it is an
-    // actual row in the `ProcessArea` catalog (Control Documental's
-    // "Procesos y áreas" table) rather than a hardcoded list.
+    // `type` / `area` are shape-validated by their zod schemas; these check
+    // the values are actual rows of the Control Documental catalogs
+    // (`DocumentTypeCatalog` / `ProcessArea`) rather than a hardcoded list.
+    await assertTypeExists(body.type);
     await assertAreaExists(body.area);
 
     const template = body.templateKey

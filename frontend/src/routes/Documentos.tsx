@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { CircleCheck, FileDown, FilePlus, FileText, LayoutGrid, ListFilter, Plus, SearchX, Trash2 } from "lucide-react";
 
 import { useAppState } from "@/context/AppStateContext";
-import type { DocumentStatus, DocumentType } from "@/data/seed";
+import type { DocumentStatus } from "@/data/seed";
 import { ApiError, documentsApi, type DocumentFilters } from "@/lib/api";
-import { invalidateAfterDocumentMutation, useDocuments } from "@/lib/queries";
+import { invalidateAfterDocumentMutation, useDocuments, useDocumentTypes } from "@/lib/queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,8 @@ import { EmptyDocumentsState } from "@/features/documents/EmptyDocumentsState";
 import { docTypeBadgeClass, documentTypeOptions, normaOptions, statusBadgeClass, statusLabel } from "@/features/documents/docStyles";
 
 type EstadoFilter = "all" | DocumentStatus | "Vencido";
-type TypeFilter = "all" | DocumentType;
+/** Any catalog type name — `Document.type` is free text. */
+type TypeFilter = "all" | string;
 type NormaFilter = "all" | (typeof normaOptions)[number];
 
 /** Port of legacy js/documents.js renderDocumentList/applyFilters/clearFilters. */
@@ -102,6 +103,15 @@ export default function Documentos() {
 
   const documentsQuery = useDocuments(filters);
   const docList = useMemo(() => documentsQuery.data ?? [], [documentsQuery.data]);
+
+  // "Tipo" filter options come from the same "Tipos de información
+  // documentada" catalog as Crear Documento (falling back to the 5 template
+  // types until it loads), so the filter and the create dialog stay aligned.
+  const typeCatalog = useDocumentTypes().data;
+  const typeFilterOptions = useMemo(
+    () => (typeCatalog && typeCatalog.length > 0 ? typeCatalog.map((t) => t.nombre) : documentTypeOptions),
+    [typeCatalog],
+  );
   const approvalDoc = docList.find((d) => d.code === approvalCode) ?? null;
 
   const hasActiveFilters =
@@ -173,7 +183,7 @@ export default function Documentos() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
-                {documentTypeOptions.map((t) => (
+                {typeFilterOptions.map((t) => (
                   <SelectItem key={t} value={t}>
                     {t}
                   </SelectItem>
@@ -260,7 +270,7 @@ export default function Documentos() {
                   </span>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={docTypeBadgeClass[d.type]}>
+                  <Badge variant="outline" className={docTypeBadgeClass(d.type)}>
                     {d.type}
                   </Badge>
                 </TableCell>

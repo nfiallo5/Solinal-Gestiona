@@ -377,7 +377,8 @@ export const configApi = {
 /** `estado` also accepts the pseudo-status `"Vencido"` (means `vencido === true`). */
 export interface DocumentFilters {
   estado?: DocumentStatus | "Vencido";
-  type?: DocumentType;
+  /** Free text — any catalog type name. */
+  type?: string;
   norma?: string;
   vencido?: boolean;
   critico?: boolean;
@@ -387,8 +388,10 @@ export interface DocumentFilters {
 export interface CreateDocumentInput {
   templateKey?: string | null;
   title: string;
-  type: DocumentType;
-  /** 3-letter department code — the middle segment of the control code. */
+  /** Free text — any `nombre` from the "Tipos de información documentada"
+   * catalog. Validated server-side against `DocumentTypeCatalog`. */
+  type: string;
+  /** Department code — the PROCESO segment of the control code. */
   area: string;
   norma: string;
   description?: string;

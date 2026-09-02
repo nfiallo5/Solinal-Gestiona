@@ -45,12 +45,12 @@ describe('enum wire mapping', () => {
 describe('documentCode', () => {
   it('reproduces the frontend rule under the default coding rule', () => {
     expect(
-      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Procedimiento', 'CAL', [
+      nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'PRO', 'CAL', [
         'PRO-CAL-009',
         'POL-GER-003',
       ]),
     ).toBe('PRO-CAL-010');
-    expect(nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'Checklist', 'HAC', [])).toBe('CHK-HAC-001');
+    expect(nextDocumentCodeFrom(DEFAULT_CODING_RULE, 'CHK', 'HAC', [])).toBe('CHK-HAC-001');
   });
 });
 

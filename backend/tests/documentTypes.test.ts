@@ -27,6 +27,8 @@ let original: Array<{
   orden: number;
 }>;
 
+const createdCodes: string[] = [];
+
 async function auditWatermark(): Promise<number> {
   const row = await prisma.auditLogEntry.findFirst({ orderBy: { id: 'desc' } });
   return row?.id ?? 0;
@@ -76,6 +78,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (createdCodes.length > 0) {
+    await prisma.document.deleteMany({ where: { code: { in: createdCodes } } });
+  }
   if (original) await restoreOriginal();
   await disconnectPrisma();
 });
@@ -168,5 +173,51 @@ describe('PUT /document-types', () => {
 
   it('401s without a token', async () => {
     expect((await request(app).put('/document-types').send([])).status).toBe(401);
+  });
+});
+
+describe('document-type catalog drives POST /documents', () => {
+  it('accepts a non-canonical catalog type and codes it with the catalog sigla', async () => {
+    // Add "Programa" (PRG) alongside the seeded 5.
+    await request(app)
+      .put('/document-types')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send([
+        ...original,
+        { sigla: 'PRG', nombre: 'Programa', nivel: 2, digitos: 3, retencion: '5 años', firma: true, orden: original.length },
+      ]);
+
+    const ok = await request(app)
+      .post('/documents')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        templateKey: null,
+        title: 'Programa de auditorías internas',
+        type: 'Programa',
+        area: 'CAL',
+        norma: 'ISO 9001:2015',
+        critico: false,
+      });
+    expect(ok.status).toBe(201);
+    createdCodes.push(ok.body.code as string);
+    expect(ok.body.type).toBe('Programa');
+    expect(ok.body.code).toMatch(/^PRG-CAL-\d{3}$/);
+
+    await restoreOriginal();
+  });
+
+  it('400s a type that is not in the catalog', async () => {
+    const res = await request(app)
+      .post('/documents')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        templateKey: null,
+        title: 'Tipo inventado',
+        type: 'Manifiesto Estelar',
+        area: 'CAL',
+        norma: 'ISO 9001:2015',
+        critico: false,
+      });
+    expect(res.status).toBe(400);
   });
 });

@@ -12,7 +12,13 @@
 // Types
 // ---------------------------------------------------------------------------
 
-/** The 5 legacy document types (see SolinalGestiona_MVP.html template selects). */
+/**
+ * The 5 curated template types. Still the closed vocabulary for
+ * `DocumentTemplate.type` (only 5 seed templates; the AI template simulator
+ * and ISO-compliance mapping lean on the closed set). A *document*'s `type`
+ * (`SolinalDocument.type`) is a free string now — any row of Control
+ * Documental's "Tipos de información documentada" table.
+ */
 export type DocumentType =
   | "Procedimiento"
   | "Política"
@@ -29,7 +35,10 @@ export type DocumentStatus =
 export interface SolinalDocument {
   code: string;
   title: string;
-  type: DocumentType;
+  /** Free text — any `nombre` from the "Tipos de información documentada"
+   * catalog, not just the 5 `DocumentType` values (which stay the template
+   * vocabulary). */
+  type: string;
   norma: string;
   estado: DocumentStatus;
   version: string;

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import type { DocumentType } from "@/data/seed";
 import { documentsApi, type CreateDocumentInput } from "@/lib/api";
 import {
   invalidateAfterDocumentMutation,
@@ -33,7 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DEFAULT_CODING_RULE, documentAreas, nextDocumentCode, normaOptions } from "./docStyles";
+import {
+  DEFAULT_CODING_RULE,
+  documentAreas,
+  nextDocumentCode,
+  normaOptions,
+  typeSigla,
+} from "./docStyles";
 import { buildDocumentTypeOptions } from "./controlConfigStore";
 
 /** Port of legacy js/templates.js openCreateDoc / templateChanged / createDocument. */
@@ -50,7 +55,7 @@ interface CreateDocumentDialogProps {
 const emptyForm = {
   templateKey: "",
   title: "",
-  type: "Procedimiento" as DocumentType,
+  type: "Procedimiento" as string,
   area: "CAL",
   norma: "ISO 9001:2015" as (typeof normaOptions)[number],
   description: "",
@@ -69,11 +74,11 @@ export function CreateDocumentDialog({
   const templates = useTemplates().data ?? [];
   const documents = useDocuments().data ?? [];
 
-  // "Tipo documental" comes from Control Documental's "Tipos de información
-  // documentada" table — the real DocumentTypeCatalog backend table now,
-  // not localStorage — falling back to the built-in labels while the query
-  // is still loading. "Área" is still a separate, localStorage-only catalog
-  // (see controlConfigStore.ts).
+  // "Tipo documental" — every row of Control Documental's "Tipos de
+  // información documentada" table (the real DocumentTypeCatalog backend
+  // table), falling back to the 5 template types while the query loads.
+  // `Document.type` is free text, so all catalog types are pickable and the
+  // server validates the choice against this same table.
   const documentTypesQuery = useDocumentTypes();
   const typeOptions = buildDocumentTypeOptions(documentTypesQuery.data);
 
@@ -125,9 +130,15 @@ export function CreateDocumentDialog({
     : undefined;
 
   // Preview only — the real control code is generated server-side by
-  // `POST /documents`, using the exact same saved coding rule (see
-  // `nextDocumentCode` in backend/src/lib/documentCode.ts).
-  const previewCode = nextDocumentCode(codingRule, form.type, form.area, documents);
+  // `POST /documents`, using the exact same saved coding rule and the same
+  // type-name -> sigla resolution (see `nextDocumentCode` / `resolveTypeSigla`
+  // in backend/src/lib/documentCode.ts).
+  const previewCode = nextDocumentCode(
+    codingRule,
+    typeSigla(form.type, documentTypesQuery.data),
+    form.area,
+    documents,
+  );
 
   const createMutation = useMutation({
     mutationFn: (input: CreateDocumentInput) => documentsApi.create(input),
@@ -179,7 +190,7 @@ export function CreateDocumentDialog({
               <Label>Tipo documental</Label>
               <Select
                 value={form.type}
-                onValueChange={(v) => setForm((f) => ({ ...f, type: v as DocumentType }))}
+                onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
               >
                 <SelectTrigger>
                   <SelectValue />

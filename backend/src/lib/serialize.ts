@@ -84,7 +84,9 @@ export type DocumentWithRelations = Document & {
 export interface DocumentDTO {
   code: string;
   title: string;
-  type: DocumentTypeWire;
+  /** Free text — any `nombre` from `DocumentTypeCatalog`. `DocumentTemplate`
+   * still uses the closed `DocumentTypeWire` vocabulary (see `TemplateDTO`). */
+  type: string;
   norma: string;
   estado: EstadoWire;
   version: string;

@@ -14,19 +14,54 @@
  * to preserve the rule but compute it on the server, so the client can no
  * longer supply an arbitrary `code`.
  */
-import { DocumentType, type Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../prisma.js';
 import { HttpError } from '../middleware/error.js';
 
-/** Verbatim from docStyles.ts. */
-export const documentTypeAbbr: Record<DocumentType, string> = {
+/**
+ * Fallback sigla for the 5 canonical types, used only if the
+ * `DocumentTypeCatalog` table has no row for one of them. The live mapping
+ * (type name -> sigla, for any of the ~14 catalog rows) is `resolveTypeSigla`.
+ */
+const FALLBACK_TYPE_SIGLA: Record<string, string> = {
   Procedimiento: 'PRO',
   Política: 'POL',
   Manual: 'MAN',
   Instructivo: 'INS',
   Checklist: 'CHK',
 };
+
+/** Throws `400` if `type` is not a `nombre` in the `DocumentTypeCatalog`. */
+export async function assertTypeExists(
+  type: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<void> {
+  const row = await client.documentTypeCatalog.findFirst({ where: { nombre: type } });
+  if (!row) {
+    const known = await client.documentTypeCatalog.findMany({
+      select: { nombre: true },
+      orderBy: { orden: 'asc' },
+    });
+    throw new HttpError(
+      400,
+      `El tipo documental "${type}" no está en el catálogo de tipos de información documentada. ` +
+        `Opciones válidas: ${known.map((r) => r.nombre).join(', ')}.`,
+      { code: 'BAD_REQUEST' },
+    );
+  }
+}
+
+/** Maps a document type `nombre` to its code sigla (the TIPO segment), from
+ * the `DocumentTypeCatalog` table, falling back to the canonical 5 and, last
+ * resort, the first 3 letters uppercased. */
+export async function resolveTypeSigla(
+  type: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<string> {
+  const row = await client.documentTypeCatalog.findFirst({ where: { nombre: type } });
+  return row?.sigla ?? FALLBACK_TYPE_SIGLA[type] ?? type.slice(0, 3).toUpperCase();
+}
 
 export interface DocumentArea {
   code: string;
@@ -144,7 +179,8 @@ export async function loadCodingRule(
 }
 
 interface TokenContext {
-  type: DocumentType;
+  /** Already resolved to the TIPO-segment sigla (e.g. "PRO"), not the type name. */
+  typeSigla: string;
   areaCode: string;
   year: number;
 }
@@ -154,7 +190,7 @@ function tokenValue(token: string, rule: CodingRuleShape, ctx: TokenContext): st
     case 'SIGLA':
       return rule.empresaSigla;
     case 'TIPO':
-      return documentTypeAbbr[ctx.type];
+      return ctx.typeSigla;
     case 'PROCESO':
       return ctx.areaCode;
     case 'ANIO':
@@ -198,12 +234,12 @@ function splitAroundCorrelativo(
  * the final code and (with existingCodes) to find the next free one. */
 export function buildDocumentCode(
   rule: CodingRuleShape,
-  type: DocumentType,
+  typeSigla: string,
   areaCode: string,
   correlativo: number,
   year: number = new Date().getFullYear(),
 ): string {
-  const { prefix, suffix } = splitAroundCorrelativo(rule, { type, areaCode, year });
+  const { prefix, suffix } = splitAroundCorrelativo(rule, { typeSigla, areaCode, year });
   return `${prefix}${String(correlativo).padStart(rule.digitos, '0')}${suffix}`;
 }
 
@@ -213,12 +249,12 @@ export function buildDocumentCode(
  */
 export function nextDocumentCodeFrom(
   rule: CodingRuleShape,
-  type: DocumentType,
+  typeSigla: string,
   areaCode: string,
   existingCodes: readonly string[],
   year: number = new Date().getFullYear(),
 ): string {
-  const { prefix, suffix } = splitAroundCorrelativo(rule, { type, areaCode, year });
+  const { prefix, suffix } = splitAroundCorrelativo(rule, { typeSigla, areaCode, year });
   let max = 0;
   for (const code of existingCodes) {
     if (code.length < prefix.length + suffix.length) continue;
@@ -227,14 +263,14 @@ export function nextDocumentCodeFrom(
     const n = Number.parseInt(numPart, 10);
     if (!Number.isNaN(n) && n > max) max = n;
   }
-  return buildDocumentCode(rule, type, areaCode, max + 1, year);
+  return buildDocumentCode(rule, typeSigla, areaCode, max + 1, year);
 }
 
-/** `"PRO-CAL-"` for (Procedimiento, "CAL") under the default rule — kept for
+/** `"PRO-CAL-"` for ("PRO", "CAL") under the default rule — kept for
  * anything still assuming the classic 3-segment shape (none left in this
  * file; retained as a small, testable convenience). */
-export function documentCodePrefix(type: DocumentType, areaCode: string): string {
-  return `${documentTypeAbbr[type]}-${areaCode}-`;
+export function documentCodePrefix(typeSigla: string, areaCode: string): string {
+  return `${typeSigla}-${areaCode}-`;
 }
 
 /**
@@ -246,13 +282,14 @@ export function documentCodePrefix(type: DocumentType, areaCode: string): string
  * `createWithGeneratedCode()` below to retry transparently instead.
  */
 export async function nextDocumentCode(
-  type: DocumentType,
+  type: string,
   areaCode: string,
   client: Prisma.TransactionClient | typeof prisma = prisma,
 ): Promise<string> {
   const rule = await loadCodingRule(client);
+  const typeSigla = await resolveTypeSigla(type, client);
   const year = new Date().getFullYear();
-  const { prefix, suffix } = splitAroundCorrelativo(rule, { type, areaCode, year });
+  const { prefix, suffix } = splitAroundCorrelativo(rule, { typeSigla, areaCode, year });
   // `startsWith` narrows the scan in the common case; when a rule puts
   // CORRELATIVO first (empty prefix) this just fetches every code, which is
   // fine at this app's scale — correctness over the query being tight.
@@ -261,7 +298,7 @@ export async function nextDocumentCode(
     select: { code: true },
   });
   const codes = suffix ? rows.map((r) => r.code).filter((c) => c.endsWith(suffix)) : rows.map((r) => r.code);
-  return nextDocumentCodeFrom(rule, type, areaCode, codes, year);
+  return nextDocumentCodeFrom(rule, typeSigla, areaCode, codes, year);
 }
 
 /**
@@ -274,7 +311,7 @@ export async function nextDocumentCode(
  *   );
  */
 export async function createWithGeneratedCode<T>(
-  type: DocumentType,
+  type: string,
   areaCode: string,
   create: (code: string) => Promise<T>,
   attempts = 3,

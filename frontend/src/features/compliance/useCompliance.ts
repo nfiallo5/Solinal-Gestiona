@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { DocumentType, SolinalDocument } from "@/data/seed";
+import type { SolinalDocument } from "@/data/seed";
 import { useDocuments, useTemplates } from "@/lib/queries";
 
 export type ComplianceStatus = "valid" | "warning" | "danger";
@@ -15,7 +15,8 @@ export interface IsoScore {
 export interface RequirementRow {
   key: string;
   norma: string;
-  type: DocumentType;
+  /** A catalog type name — free text, like `SolinalDocument.type`. */
+  type: string;
   label: string;
   status: ComplianceStatus;
   detail: string;
@@ -92,7 +93,7 @@ export function useRequirementMapping(): RequirementRow[] {
   const documents = useDocuments().data ?? [];
   const templates = useTemplates().data ?? [];
   return useMemo(() => {
-    const pairs = new Map<string, { norma: string; type: DocumentType }>();
+    const pairs = new Map<string, { norma: string; type: string }>();
     templates.forEach((t) =>
       pairs.set(`${t.norma}|${t.type}`, { norma: t.norma, type: t.type }),
     );

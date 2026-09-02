@@ -110,6 +110,18 @@ export const zPeriodicidadWire = z
 
 /** These three need no transform — identifier === wire string. */
 export const zDocumentType = z.nativeEnum(DocumentType);
+
+/**
+ * `Document.type` (unlike `DocumentTemplate.type`) is free text now — any row
+ * of the `DocumentTypeCatalog` table. This only checks the shape; the
+ * documents route confirms the value exists in the catalog via
+ * `assertTypeExists` in `documentCode.ts`.
+ */
+export const zDocumentTypeFree = z
+  .string()
+  .trim()
+  .min(1, 'El tipo documental es obligatorio.')
+  .max(60);
 export const zTemplateLevel = z.nativeEnum(TemplateLevel);
 export const zRoleName = z.nativeEnum(RoleName);
 export const zPasswordPolicy = z.nativeEnum(PasswordPolicy);

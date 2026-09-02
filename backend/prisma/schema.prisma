@@ -31,7 +31,12 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------------
 
-/// seed.ts `DocumentType`. All five identifiers round-trip unchanged.
+/// seed.ts `DocumentType`. Still the closed vocabulary for
+/// `DocumentTemplate.type` (there are only 5 curated templates, and the AI
+/// template simulator + ISO-compliance mapping lean on that closed set).
+/// `Document.type`, however, is a free `String` now — a document created
+/// from Control Documental can be any row of the `DocumentTypeCatalog`
+/// table (Programa, Instructivo, Ficha técnica, …), not just these five.
 enum DocumentType {
   Procedimiento
   Política
@@ -131,7 +136,10 @@ model Document {
   /// Generated server-side by `src/lib/documentCode.ts`, never client-supplied.
   code    String         @id
   title   String
-  type    DocumentType
+  /// Free text, validated on create against the `DocumentTypeCatalog`
+  /// catalog (`nombre`). Was a `DocumentType` enum; see that enum's doc
+  /// comment for why `Document` opened up but `DocumentTemplate` did not.
+  type    String
   norma   String
   estado  DocumentStatus
   version String

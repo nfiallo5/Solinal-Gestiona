@@ -38,13 +38,22 @@ export function esRegistroPorNivel(nivel: TemplateLevel | undefined): boolean {
   return nivel === "Registro";
 }
 
-export const docTypeBadgeClass: Record<DocumentType, string> = {
+const DOC_TYPE_BADGE_CLASS: Record<DocumentType, string> = {
   Procedimiento: "border-tag-technical/40 bg-tag-technical-bg text-tag-technical",
   Política: "border-tag-permit/40 bg-tag-permit-bg text-tag-permit",
   Manual: "border-tag-lab/40 bg-tag-lab-bg text-tag-lab",
   Instructivo: "border-tag-sanitary/40 bg-tag-sanitary-bg text-tag-sanitary",
   Checklist: "border-tag-checklist/40 bg-tag-checklist-bg text-tag-checklist",
 };
+
+/** Tag-badge classes for a document type. The 5 curated types keep their
+ * Lovable hue; any other catalog type (Programa, Ficha técnica, …) gets a
+ * neutral badge rather than an undefined class string. */
+export function docTypeBadgeClass(type: string): string {
+  return (
+    DOC_TYPE_BADGE_CLASS[type as DocumentType] ?? "border-border bg-muted text-muted-foreground"
+  );
+}
 
 /** Estado (+ vencido override) -> status badge classes, using the shared
  * status-valid / status-warning / status-danger tokens from styles.css. */
@@ -92,6 +101,23 @@ export const documentTypeAbbr: Record<DocumentType, string> = {
   Instructivo: "INS",
   Checklist: "CHK",
 };
+
+/**
+ * Type name -> code sigla (the TIPO segment). Mirrors the backend's
+ * `resolveTypeSigla`: prefer the matching row in the "Tipos de información
+ * documentada" catalog, fall back to the canonical 5, last resort the first
+ * 3 letters uppercased. Pass `catalog` (from `useDocumentTypes()`) wherever
+ * a non-canonical type could appear.
+ */
+export function typeSigla(
+  type: string,
+  catalog?: { nombre: string; sigla: string }[],
+): string {
+  const hit = catalog?.find((t) => t.nombre === type);
+  return (
+    hit?.sigla ?? documentTypeAbbr[type as DocumentType] ?? type.slice(0, 3).toUpperCase()
+  );
+}
 
 export interface DocumentArea {
   code: string;
@@ -146,7 +172,8 @@ export const DEFAULT_CODING_RULE: CodingRuleDTO = {
 };
 
 interface TokenContext {
-  type: DocumentType;
+  /** Already resolved to the TIPO-segment sigla (e.g. "PRO"), not the type name. */
+  typeSigla: string;
   areaCode: string;
   year: number;
 }
@@ -156,7 +183,7 @@ function tokenValue(token: string, rule: CodingRuleDTO, ctx: TokenContext): stri
     case "SIGLA":
       return rule.empresaSigla;
     case "TIPO":
-      return documentTypeAbbr[ctx.type];
+      return ctx.typeSigla;
     case "PROCESO":
       return ctx.areaCode;
     case "ANIO":
@@ -186,16 +213,21 @@ function splitAroundCorrelativo(
   return { prefix: templated.slice(0, idx), suffix: templated.slice(idx + 1) };
 }
 
-/** Next sequential code under `rule` for a (type, area) pair, e.g.
- * nextDocumentCode(rule, "Procedimiento", "CAL", docs) -> "PRO-CAL-010". */
+/** Next sequential code under `rule` for a (type sigla, area) pair, e.g.
+ * nextDocumentCode(rule, "PRO", "CAL", docs) -> "PRO-CAL-010". Resolve the
+ * sigla with `typeSigla(type, catalog)` before calling. */
 export function nextDocumentCode(
   rule: CodingRuleDTO,
-  type: DocumentType,
+  typeSiglaValue: string,
   areaCode: string,
   existingDocs: SolinalDocument[],
   year: number = new Date().getFullYear(),
 ): string {
-  const { prefix, suffix } = splitAroundCorrelativo(rule, { type, areaCode, year });
+  const { prefix, suffix } = splitAroundCorrelativo(rule, {
+    typeSigla: typeSiglaValue,
+    areaCode,
+    year,
+  });
   let max = 0;
   for (const doc of existingDocs) {
     const code = doc.code;
