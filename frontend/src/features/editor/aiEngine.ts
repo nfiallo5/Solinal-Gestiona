@@ -7,40 +7,6 @@
  */
 import type { SolinalDocument } from "@/data/seed";
 
-export interface ChatReply {
-  text: string;
-  actionLabel: string;
-  insertText: string;
-}
-
-/** Port of sendPromptToAI's branching + insertProposedTextToEditor.
- * `insertText` is HTML, appended directly into the contentEditable
- * document body (see ContentEditor.tsx). */
-export function getChatReply(prompt: string): ChatReply {
-  const lower = prompt.toLowerCase();
-  if (lower.includes("inocuidad") || lower.includes("haccp")) {
-    return {
-      text: "He redactado una propuesta de control crítico HACCP adaptada a Solinal. Secciones: 1. Puntos Críticos de Control (PCC), 2. Límites Críticos y 3. Sistema de Vigilancia.",
-      actionLabel: "Insertar propuesta",
-      insertText:
-        "<p><strong>[PROPUESTA IA - PLAN HACCP]</strong></p><ul>" +
-        "<li><strong>Puntos Críticos (PCC):</strong> Fritura de papas.</li>" +
-        "<li><strong>Límites Críticos:</strong> Humedad &lt; 2%, Temperatura &gt; 175°C.</li>" +
-        "<li><strong>Vigilancia:</strong> Sensor digital calibrado y registro de bitácora por hora.</li></ul>",
-    };
-  }
-  return {
-    text: "Basado en el contexto de tu consulta, he generado la sección solicitada conforme a los estándares de auditoría de la norma ISO.",
-    actionLabel: "Insertar texto",
-    insertText:
-      "<p><strong>[SECCIÓN GENERADA CON IA]</strong></p><p>Definición del procedimiento operativo: Todos los controles de muestreo deben registrarse en tiempo real usando firmas electrónicas del elaborador a cargo.</p>",
-  };
-}
-
-/** Port of triggerRiskAnalysis. */
-export const riskAnalysisText =
-  'Inconsistencia detectada: La frecuencia de verificación en la sección de control de registros es vaga ("de forma regular"). Recomiendo cambiar por "Diario al cierre de turno".\n\nAlerta: No se ha definido el procedimiento de acciones correctivas ante desvíos de límites de fritura.';
-
 /** Port of runAISummary. */
 export function multiDocSummaryText(selectedCodes: string[]): string {
   return (

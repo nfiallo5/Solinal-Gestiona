@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
   AlignCenter,
   AlignJustify,
@@ -53,6 +53,25 @@ interface ContentEditorProps {
   resetKey?: number;
 }
 
+/** Imperative handle for the "Mejorar texto seleccionado" AI action (AiToolbox
+ * -> Editor.tsx), which needs to read/replace the live browser selection —
+ * something a `content`/`onChange` prop pair can't express. */
+export interface ContentEditorHandle {
+  /** HTML of the current selection, or null if there's no real (non-collapsed)
+   * selection inside this editor. Read synchronously at click time — the
+   * caller sends it to the AI, then calls `applyToSelection` once the reply
+   * comes back. */
+  captureSelectionHtml: () => string | null;
+  /**
+   * Replaces the CURRENT live selection with `html`, via the same
+   * `execCommand('insertHTML', …)` the toolbar already uses — so it fires a
+   * native `input` event and flows through the existing autosave path with
+   * no extra plumbing. Only works if the selection is still live (same
+   * caveat as the formatting toolbar buttons); returns false otherwise.
+   */
+  applyToSelection: (html: string) => boolean;
+}
+
 const TABLE_HTML =
   "<table><thead><tr><th>Columna 1</th><th>Columna 2</th></tr></thead>" +
   "<tbody><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table><p><br></p>";
@@ -94,23 +113,49 @@ function ToolbarButton({
  * headings, lists, alignment, table insert, undo/redo — mirroring legacy
  * `.etb` / `ed()`), plus the lock toggle, locked section, comments thread
  * and signatures panel. */
-export function ContentEditor({
-  doc,
-  activeUser,
-  activeRole,
-  isSectionLocked,
-  comments,
-  canComment,
-  onContentChange,
-  onToggleLock,
-  onSaveVersion,
-  onAddComment,
-  onSign,
-  readOnly = false,
-  resetKey = 0,
-}: ContentEditorProps) {
+export const ContentEditor = forwardRef<ContentEditorHandle, ContentEditorProps>(function ContentEditor(
+  {
+    doc,
+    activeUser,
+    activeRole,
+    isSectionLocked,
+    comments,
+    canComment,
+    onContentChange,
+    onToggleLock,
+    onSaveVersion,
+    onAddComment,
+    onSign,
+    readOnly = false,
+    resetKey = 0,
+  },
+  ref,
+) {
   const isOwner = activeUser === doc.creador || activeRole === "Administrador";
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    captureSelectionHtml() {
+      const body = bodyRef.current;
+      const selection = window.getSelection();
+      if (!body || !selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+      const range = selection.getRangeAt(0);
+      if (!body.contains(range.commonAncestorContainer)) return null;
+      const container = document.createElement("div");
+      container.appendChild(range.cloneContents());
+      return container.innerHTML || null;
+    },
+    applyToSelection(html) {
+      const selection = window.getSelection();
+      if (!bodyRef.current || !selection || selection.rangeCount === 0) return false;
+      const range = selection.getRangeAt(0);
+      if (!bodyRef.current.contains(range.commonAncestorContainer)) return false;
+      bodyRef.current.focus();
+      exec("insertHTML", html);
+      handleInput();
+      return true;
+    },
+  }));
 
   // Uncontrolled contentEditable: only re-seed the DOM when switching to a
   // different document — or when `resetKey` changes because the server
@@ -284,4 +329,4 @@ export function ContentEditor({
       )}
     </div>
   );
-}
+});

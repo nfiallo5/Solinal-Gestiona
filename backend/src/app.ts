@@ -26,6 +26,7 @@ import { auditLogsRouter } from './routes/auditLogs.js';
 import { documentWorkflowRouter } from './routes/documentWorkflow.js';
 import { regulationAlertsRouter } from './routes/regulationAlerts.js';
 import { documentTypesRouter } from './routes/documentTypes.js';
+import { aiRouter } from './routes/ai.js';
 
 export function createApp(): Express {
   const app = express();
@@ -56,6 +57,10 @@ export function createApp(): Express {
   // specific action paths (/:code/sign, /:code/versions, …) must get first
   // refusal before the generic /:code handlers can match them.
   app.use('/documents', documentWorkflowRouter);
+  // Same /documents/:code/... action-route family as documentWorkflowRouter
+  // (added after the original parallel-build set above; new real Claude-
+  // backed AI assistance, see routes/ai.ts).
+  app.use('/documents', aiRouter);
   app.use('/documents', documentsRouter);
   app.use('/templates', templatesRouter);
   app.use('/users', usersRouter);

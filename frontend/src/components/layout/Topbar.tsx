@@ -29,22 +29,6 @@ export function Topbar() {
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
-
-        <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
-          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-            {initials}
-          </span>
-          <span className="text-left leading-tight">
-            <span className="block text-sm font-semibold text-foreground">
-              {activeUser}
-            </span>
-            <span className="block text-xs text-muted-foreground">
-              · {activeRole}
-            </span>
-          </span>
-        </div>
-      </div>
     </header>
   );
 }

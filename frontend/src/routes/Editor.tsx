@@ -7,7 +7,7 @@ import { EyeOff, History, Loader2 } from "lucide-react";
 import { useAppState } from "@/context/AppStateContext";
 import { Button } from "@/components/ui/button";
 import { AiToolbox } from "@/features/editor/AiToolbox";
-import { ContentEditor } from "@/features/editor/ContentEditor";
+import { ContentEditor, type ContentEditorHandle } from "@/features/editor/ContentEditor";
 import { esRegistroPorNivel } from "@/features/documents/docStyles";
 import { GuidePanel } from "@/features/editor/GuidePanel";
 import { CreateDocumentDialog } from "@/features/documents/CreateDocumentDialog";
@@ -19,10 +19,12 @@ import { ScannerDialog } from "@/features/editor/ScannerDialog";
 import { SummaryDialog } from "@/features/editor/SummaryDialog";
 import { VersionHistoryDialog } from "@/features/editor/VersionHistoryDialog";
 import {
+  aiApi,
   ApiError,
   documentsApi,
   isContentConflict,
   workflowApi,
+  type AiChatTurn,
   type ContentConflictDetails,
   type ScanImportInput,
   type WorkflowResult,
@@ -91,6 +93,8 @@ export default function EditorPage() {
   /** Freshest known body: the server's, or the user's unsaved keystrokes. */
   const currentContentRef = useRef("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  /** For the "Mejorar texto seleccionado" AI action — see ContentEditorHandle. */
+  const contentEditorRef = useRef<ContentEditorHandle>(null);
 
   useEffect(() => {
     if (!doc) return;
@@ -360,6 +364,55 @@ export default function EditorPage() {
     toast.success("Resumen consolidado generado.");
   }
 
+  // --- asistente Claude (real) -------------------------------------------------
+  // All four are "pure" calls to the backend — see backend/src/routes/ai.ts's
+  // header. Insertion reuses the exact same paths as everything else in this
+  // file: appendContent() (PATCH) for draft/chat-insert, and the editor's own
+  // selection-replace + autosave loop for "mejorar selección".
+  async function handleAiGenerateDraft() {
+    try {
+      const { html } = await aiApi.draft(code);
+      await appendContent(html, "Borrador generado con IA insertado al documento.");
+    } catch (error) {
+      reportError(error, "No se pudo generar el borrador con IA.");
+    }
+  }
+
+  async function handleAiComplianceCheck() {
+    try {
+      const { findings } = await aiApi.compliance(code);
+      return findings;
+    } catch (error) {
+      reportError(error, "No se pudo ejecutar el análisis de cumplimiento IA.");
+      return [];
+    }
+  }
+
+  async function handleAiImproveSelection() {
+    const selectionHtml = contentEditorRef.current?.captureSelectionHtml();
+    if (!selectionHtml) {
+      toast.error("Selecciona texto en el documento antes de usar esta acción.");
+      return;
+    }
+    try {
+      const { html } = await aiApi.improve(code, selectionHtml);
+      const applied = contentEditorRef.current?.applyToSelection(html);
+      if (applied) toast.success("Texto mejorado con IA.");
+      else toast.error("La selección cambió — vuelve a seleccionar el texto e intenta de nuevo.");
+    } catch (error) {
+      reportError(error, "No se pudo mejorar el texto seleccionado.");
+    }
+  }
+
+  async function handleAiChat(question: string, history: AiChatTurn[]) {
+    try {
+      return await aiApi.chat(code, history, question);
+    } catch (error) {
+      reportError(error, "El asistente no pudo responder.");
+      throw error;
+    }
+  }
+
   // Lector role already receives the "Acceso restringido" early return above,
   // so any role reaching this point is implicitly allowed to comment.
   const canComment = true;
@@ -395,6 +448,7 @@ export default function EditorPage() {
         <div className="flex flex-col gap-4.5">
           <MetadataForm doc={doc} />
           <ContentEditor
+            ref={contentEditorRef}
             doc={doc}
             activeUser={activeUser}
             activeRole={activeRole}
@@ -421,6 +475,11 @@ export default function EditorPage() {
             onOpenSummary={() => setSummaryModalOpen(true)}
             onOpenScanner={() => setScannerModalOpen(true)}
             onSimulateRegulation={() => void handleSimulateRegulation()}
+            onGenerateDraft={handleAiGenerateDraft}
+            onComplianceCheck={handleAiComplianceCheck}
+            onImproveSelection={handleAiImproveSelection}
+            onChat={handleAiChat}
+            writeDisabled={contenidoBloqueado}
           />
         </div>
       </div>

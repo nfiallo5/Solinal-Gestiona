@@ -589,6 +589,58 @@ export interface DocumentTypeCatalogEntry {
   orden: number;
 }
 
+// ---------------------------------------------------------------------------
+// AI assistance — /documents/:code/ai/*
+// ---------------------------------------------------------------------------
+
+export interface AiFinding {
+  severity: "gap" | "weak" | "ok";
+  title: string;
+  detail: string;
+}
+
+export interface AiChatTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface AiChatReply {
+  answer: string;
+  suggestionHtml: string | null;
+}
+
+/**
+ * All four actions are "pure" — they never write the document themselves.
+ * `draft`/chat suggestions get inserted via the normal `appendContent()`
+ * PATCH flow; `improve` gets applied to the live selection in the editor.
+ * See backend/src/routes/ai.ts's file header for the full rationale.
+ */
+export const aiApi = {
+  draft: (code: string, clausulaIso?: string) =>
+    request<{ html: string }>(`/documents/${encodeURIComponent(code)}/ai/draft`, {
+      method: "POST",
+      body: { clausulaIso },
+    }),
+
+  compliance: (code: string, clausulaIso?: string) =>
+    request<{ findings: AiFinding[] }>(`/documents/${encodeURIComponent(code)}/ai/compliance`, {
+      method: "POST",
+      body: { clausulaIso },
+    }),
+
+  improve: (code: string, selectionHtml: string) =>
+    request<{ html: string }>(`/documents/${encodeURIComponent(code)}/ai/improve`, {
+      method: "POST",
+      body: { selectionHtml },
+    }),
+
+  chat: (code: string, messages: AiChatTurn[], question: string) =>
+    request<AiChatReply>(`/documents/${encodeURIComponent(code)}/ai/chat`, {
+      method: "POST",
+      body: { messages, question },
+    }),
+};
+
 /**
  * Control Documental's "Tipos de información documentada" table, now
  * backend-persisted (`/document-types`) instead of one browser's

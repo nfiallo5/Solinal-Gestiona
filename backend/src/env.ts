@@ -14,6 +14,9 @@ const schema = z.object({
   /** Comma-separated allowed browser origins. `*` allows any. */
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   MAX_FAILED_LOGIN_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  /** Optional: the /documents/:code/ai/* routes 503 with a clear message if unset,
+   * rather than failing the whole server to boot over one feature's key. */
+  ANTHROPIC_API_KEY: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
