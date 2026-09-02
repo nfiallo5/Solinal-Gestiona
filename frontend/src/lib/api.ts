@@ -655,6 +655,27 @@ export const documentTypesApi = {
     request<DocumentTypeCatalogEntry[]>("/document-types", { method: "PUT", body: items }),
 };
 
+/** Mirrors the Prisma `ProcessArea` row (backend/prisma/schema.prisma). */
+export interface ProcessAreaEntry {
+  sigla: string;
+  nombre: string;
+  orden: number;
+}
+
+/**
+ * Control Documental's "Procesos y áreas" table, now backend-persisted
+ * (`/process-areas`) instead of one browser's localStorage. Unlike document
+ * type, the area code was never an enum, so this list is authoritative:
+ * Crear Documento's "Área / Departamento" dropdown is built from it and
+ * `POST /documents` rejects an `area` that isn't one of these siglas.
+ */
+export const processAreasApi = {
+  list: () => request<ProcessAreaEntry[]>("/process-areas"),
+  /** Administrador only (enforced server-side). Replace-all semantics. */
+  save: (items: ProcessAreaEntry[]) =>
+    request<ProcessAreaEntry[]>("/process-areas", { method: "PUT", body: items }),
+};
+
 /** One of the 6 segment kinds the "Regla de codificación" builder combines
  * — matches `CODING_TOKENS` in backend/src/lib/documentCode.ts. */
 export type CodingToken = "SIGLA" | "TIPO" | "PROCESO" | "CORRELATIVO" | "ANIO" | "VERSION";

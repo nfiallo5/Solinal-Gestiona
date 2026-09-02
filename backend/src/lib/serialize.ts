@@ -37,6 +37,7 @@ import type {
   DocumentTemplate,
   DocumentTypeCatalog,
   OrgConfig,
+  ProcessArea,
   Prisma,
   RegulationAlert,
   RoleName,
@@ -200,6 +201,14 @@ export interface DocumentTypeCatalogDTO {
   orden: number;
 }
 
+/** Mirrors the Prisma `ProcessArea` row — Control Documental's "Procesos y
+ * áreas" table, source of the "Área / Departamento" dropdown. */
+export interface ProcessAreaDTO {
+  sigla: string;
+  nombre: string;
+  orden: number;
+}
+
 /** Mirrors the Prisma `CodingRule` singleton row — see documentCode.ts. */
 export interface CodingRuleDTO {
   tokens: string[];
@@ -356,6 +365,14 @@ export function serializeDocumentTypeCatalog(t: DocumentTypeCatalog): DocumentTy
     retencion: t.retencion,
     firma: t.firma,
     orden: t.orden,
+  };
+}
+
+export function serializeProcessArea(a: ProcessArea): ProcessAreaDTO {
+  return {
+    sigla: a.sigla,
+    nombre: a.nombre,
+    orden: a.orden,
   };
 }
 

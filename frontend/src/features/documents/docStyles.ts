@@ -98,15 +98,22 @@ export interface DocumentArea {
   label: string;
 }
 
-/** Departments/areas in use across the seed documents (Calidad, Gerencia,
- * Producción, Ambiental, Seguridad, Higiene y Alérgenos). */
+/**
+ * Fallback list of the 9 processes/areas Control Documental ships with —
+ * mirrors `PROCESOS_INI` in ControlDocumental.jsx and the backend
+ * `ProcessArea` seed. The live list comes from the `ProcessArea` table via
+ * `useProcessAreas()`; this is only what a dropdown shows before that query
+ * resolves. */
 export const documentAreas: DocumentArea[] = [
-  { code: "CAL", label: "Calidad" },
-  { code: "GER", label: "Gerencia" },
-  { code: "PRO", label: "Producción" },
-  { code: "AMB", label: "Ambiental" },
-  { code: "SEG", label: "Seguridad" },
-  { code: "HAC", label: "Higiene y Alérgenos" },
+  { code: "GER", label: "Gerencia y estrategia" },
+  { code: "CAL", label: "Aseguramiento de la calidad" },
+  { code: "PRD", label: "Producción" },
+  { code: "MTO", label: "Mantenimiento y metrología" },
+  { code: "RHU", label: "Talento humano" },
+  { code: "LOG", label: "Logística y almacenamiento" },
+  { code: "COM", label: "Compras y comercial" },
+  { code: "IDD", label: "Investigación y desarrollo" },
+  { code: "SSA", label: "Seguridad, salud y ambiente" },
 ];
 
 /** Middle segment of a document code -> its area, for display purposes

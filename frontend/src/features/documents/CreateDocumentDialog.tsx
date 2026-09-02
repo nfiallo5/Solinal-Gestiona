@@ -10,6 +10,7 @@ import {
   useCodingRule,
   useDocuments,
   useDocumentTypes,
+  useProcessAreas,
   useTemplates,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -32,8 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DEFAULT_CODING_RULE, nextDocumentCode, normaOptions } from "./docStyles";
-import { buildDocumentTypeOptions, getDocumentAreaOptions } from "./controlConfigStore";
+import { DEFAULT_CODING_RULE, documentAreas, nextDocumentCode, normaOptions } from "./docStyles";
+import { buildDocumentTypeOptions } from "./controlConfigStore";
 
 /** Port of legacy js/templates.js openCreateDoc / templateChanged / createDocument. */
 
@@ -75,7 +76,15 @@ export function CreateDocumentDialog({
   // (see controlConfigStore.ts).
   const documentTypesQuery = useDocumentTypes();
   const typeOptions = buildDocumentTypeOptions(documentTypesQuery.data);
-  const areaOptions = getDocumentAreaOptions();
+
+  // "Área / Departamento" comes from Control Documental's "Procesos y áreas"
+  // table (the real ProcessArea backend table now, not localStorage),
+  // falling back to the built-in 9 while the query is still loading. This is
+  // the exact same list POST /documents validates `area` against.
+  const processAreasQuery = useProcessAreas();
+  const areaOptions = processAreasQuery.data
+    ? processAreasQuery.data.map((a) => ({ code: a.sigla, label: a.nombre }))
+    : documentAreas;
 
   // Control Documental's saved "Regla de codificación" — the same rule
   // POST /documents applies server-side, so this preview and the code the

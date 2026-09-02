@@ -17,6 +17,7 @@ import {
   documentsApi,
   documentTypesApi,
   getToken,
+  processAreasApi,
   templatesApi,
   usersApi,
   workflowApi,
@@ -37,6 +38,7 @@ export const queryKeys = {
   regulationAlert: (code: string) => ["regulationAlert", code] as const,
   templates: ["templates"] as const,
   documentTypes: ["documentTypes"] as const,
+  processAreas: ["processAreas"] as const,
   codingRule: ["codingRule"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
@@ -95,6 +97,17 @@ export function useDocumentTypes(enabled = true) {
   return useQuery({
     queryKey: queryKeys.documentTypes,
     queryFn: () => documentTypesApi.list(),
+    enabled,
+  });
+}
+
+/** Control Documental's "Procesos y áreas" table — the source of Crear
+ * Documento's "Área / Departamento" options and the `area` values
+ * `POST /documents` accepts. */
+export function useProcessAreas(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.processAreas,
+    queryFn: () => processAreasApi.list(),
     enabled,
   });
 }

@@ -17,6 +17,7 @@
 import { DocumentType, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../prisma.js';
+import { HttpError } from '../middleware/error.js';
 
 /** Verbatim from docStyles.ts. */
 export const documentTypeAbbr: Record<DocumentType, string> = {
@@ -32,20 +33,58 @@ export interface DocumentArea {
   label: string;
 }
 
-/** Verbatim from docStyles.ts — the departments used across the seed data. */
+/** Fallback list of the 9 processes/areas Control Documental ships with —
+ * mirrors `PROCESOS_INI` in ControlDocumental.jsx and the `ProcessArea`
+ * migration seed. The live list is the `ProcessArea` table; this is only a
+ * default for `areaFromCode` and for tests that don't hit the DB. */
 export const documentAreas: DocumentArea[] = [
-  { code: 'CAL', label: 'Calidad' },
-  { code: 'GER', label: 'Gerencia' },
-  { code: 'PRO', label: 'Producción' },
-  { code: 'AMB', label: 'Ambiental' },
-  { code: 'SEG', label: 'Seguridad' },
-  { code: 'HAC', label: 'Higiene y Alérgenos' },
+  { code: 'GER', label: 'Gerencia y estrategia' },
+  { code: 'CAL', label: 'Aseguramiento de la calidad' },
+  { code: 'PRD', label: 'Producción' },
+  { code: 'MTO', label: 'Mantenimiento y metrología' },
+  { code: 'RHU', label: 'Talento humano' },
+  { code: 'LOG', label: 'Logística y almacenamiento' },
+  { code: 'COM', label: 'Compras y comercial' },
+  { code: 'IDD', label: 'Investigación y desarrollo' },
+  { code: 'SSA', label: 'Seguridad, salud y ambiente' },
 ];
 
 export const documentAreaCodes = documentAreas.map((a) => a.code) as [string, ...string[]];
 
-/** zod schema for the `area` field of `POST /documents`. */
-export const zAreaCode = z.enum(documentAreaCodes);
+/**
+ * zod schema for the `area` field of `POST /documents`.
+ *
+ * No longer a fixed `z.enum` — the area catalog is the `ProcessArea` table
+ * now, editable from Control Documental. This only normalises the shape
+ * (uppercase, length); the route checks the value actually exists in the
+ * catalog via `assertAreaExists`.
+ */
+export const zAreaCode = z
+  .string()
+  .trim()
+  .min(1, 'El área es obligatoria.')
+  .max(10)
+  .transform((s) => s.toUpperCase());
+
+/** Throws `400` if `sigla` is not a row in the `ProcessArea` catalog. */
+export async function assertAreaExists(
+  sigla: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<void> {
+  const row = await client.processArea.findUnique({ where: { sigla } });
+  if (!row) {
+    const known = await client.processArea.findMany({
+      select: { sigla: true },
+      orderBy: { orden: 'asc' },
+    });
+    throw new HttpError(
+      400,
+      `El área "${sigla}" no está en el catálogo de procesos y áreas. ` +
+        `Opciones válidas: ${known.map((r) => r.sigla).join(', ')}.`,
+      { code: 'BAD_REQUEST' },
+    );
+  }
+}
 
 /** Middle segment of a TIPO-AREA-NNN code -> its area, for display.
  * NOTE: this assumes the default segment order/separator. A rule that

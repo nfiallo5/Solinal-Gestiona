@@ -3,9 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
-import { codingRuleApi, documentTypesApi } from "@/lib/api";
-import { queryKeys, useCodingRule } from "@/lib/queries";
-import { saveControlCatalog } from "@/features/documents/controlConfigStore";
+import { codingRuleApi, documentTypesApi, processAreasApi } from "@/lib/api";
+import { queryKeys, useCodingRule, useProcessAreas } from "@/lib/queries";
 
 /* ================================================================
    SOLINAL · CONTROL DOCUMENTAL
@@ -977,6 +976,27 @@ export default function ControlDocumental() {
   }, [codingRuleQuery.data]);
 
   /**
+   * "Procesos y áreas" (`cfg.procesos`) is backend-persisted via
+   * `/process-areas` — it's the list Crear Documento's "Área / Departamento"
+   * dropdown is built from and the set of `area` values `POST /documents`
+   * accepts. Loaded once so a background refetch never clobbers an edit in
+   * progress. Only `sigla` + `nombre` are stored server-side; the "Dueño de
+   * proceso" column stays local, matched back by sigla from DEFAULT.
+   */
+  const processAreasQuery = useProcessAreas();
+  const appliedServerAreas = useRef(false);
+  useEffect(() => {
+    const areas = processAreasQuery.data;
+    if (!areas || appliedServerAreas.current) return;
+    appliedServerAreas.current = true;
+    const duenoBySigla = new Map(DEFAULT.procesos.map((p) => [p.s, p.d]));
+    setCfg((c) => ({
+      ...c,
+      procesos: areas.map((a) => ({ s: a.sigla, n: a.nombre, d: duenoBySigla.get(a.sigla) ?? "" })),
+    }));
+  }, [processAreasQuery.data]);
+
+  /**
    * "Tipos de información documentada" is now a real backend table
    * (DocumentTypeCatalog, see backend/NOTES.md § 17) instead of
    * localStorage — Crear Documento and Cumplimiento ISO both read it
@@ -1013,7 +1033,13 @@ export default function ControlDocumental() {
         hereda: cfg.cod.hereda,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.codingRule });
-      saveControlCatalog({ procesos: cfg.procesos.map((p) => ({ s: p.s, n: p.n })) });
+      // Persists "Procesos y áreas" server-side — this is the list Crear
+      // Documento's "Área / Departamento" dropdown reads and the set of
+      // `area` values POST /documents will accept.
+      await processAreasApi.save(
+        cfg.procesos.map((p, i) => ({ sigla: p.s, nombre: p.n, orden: i })),
+      );
+      await queryClient.invalidateQueries({ queryKey: queryKeys.processAreas });
       flash("Configuración guardada y aplicada a la biblioteca documental.");
     } catch (err) {
       flash(err instanceof Error ? err.message : "No se pudo guardar la configuración.");

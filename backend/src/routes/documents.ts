@@ -36,7 +36,7 @@ import {
   zEstadoWire,
   type EstadoWire,
 } from '../lib/enums.js';
-import { createWithGeneratedCode, zAreaCode } from '../lib/documentCode.js';
+import { assertAreaExists, createWithGeneratedCode, zAreaCode } from '../lib/documentCode.js';
 
 export const documentsRouter: Router = Router();
 
@@ -174,6 +174,11 @@ documentsRouter.post(
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof zCreateBody>;
     const user = getAuthUser(req);
+
+    // `area` is validated for shape by `zAreaCode`; this checks it is an
+    // actual row in the `ProcessArea` catalog (Control Documental's
+    // "Procesos y áreas" table) rather than a hardcoded list.
+    await assertAreaExists(body.area);
 
     const template = body.templateKey
       ? await prisma.documentTemplate.findUnique({ where: { key: body.templateKey } })

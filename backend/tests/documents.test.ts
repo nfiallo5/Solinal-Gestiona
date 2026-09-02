@@ -283,17 +283,17 @@ describe('POST /documents', () => {
     const first = await createDocument('elaborador', {
       title: 'Secuencia A',
       type: 'Manual',
-      area: 'SEG',
+      area: 'MTO',
       norma: 'ISO 9001:2015',
     });
     const second = await createDocument('elaborador', {
       title: 'Secuencia B',
       type: 'Manual',
-      area: 'SEG',
+      area: 'MTO',
       norma: 'ISO 9001:2015',
     });
-    const n = (code: string) => Number.parseInt(code.slice('MAN-SEG-'.length), 10);
-    expect(first.body.code).toMatch(/^MAN-SEG-\d{3}$/);
+    const n = (code: string) => Number.parseInt(code.slice('MAN-MTO-'.length), 10);
+    expect(first.body.code).toMatch(/^MAN-MTO-\d{3}$/);
     expect(n(second.body.code)).toBe(n(first.body.code) + 1);
   });
 
@@ -302,7 +302,7 @@ describe('POST /documents', () => {
       templateKey: 'instructivo',
       title: 'Instructivo auditado',
       type: 'Instructivo',
-      area: 'HAC',
+      area: 'PRD',
       norma: 'ISO 22000:2018',
     });
     expect(res.status).toBe(201);
@@ -359,7 +359,7 @@ describe('PATCH /documents/:code', () => {
     const doc = await createDocument('elaborador', {
       title: 'Título original',
       type: 'Procedimiento',
-      area: 'PRO',
+      area: 'PRD',
       norma: 'ISO 9001:2015',
     });
     const res = await request(app)
@@ -376,7 +376,7 @@ describe('PATCH /documents/:code', () => {
     const doc = await createDocument('elaborador', {
       title: 'Versionado de contenido',
       type: 'Procedimiento',
-      area: 'PRO',
+      area: 'PRD',
       norma: 'ISO 9001:2015',
     });
     const code = doc.body.code as string;
@@ -401,7 +401,7 @@ describe('PATCH /documents/:code', () => {
     const doc = await createDocument('elaborador', {
       title: 'Conflicto concurrente',
       type: 'Procedimiento',
-      area: 'PRO',
+      area: 'PRD',
       norma: 'ISO 9001:2015',
     });
     const code = doc.body.code as string;
@@ -440,7 +440,7 @@ describe('PATCH /documents/:code', () => {
       templateKey: 'checklist', // nivel: "Registro"
       title: 'Checklist congelado',
       type: 'Checklist',
-      area: 'HAC',
+      area: 'PRD',
       norma: 'ISO 22000:2018',
     });
     const code = doc.body.code as string;
@@ -476,7 +476,7 @@ describe('PATCH /documents/:code', () => {
     const doc = await createDocument('elaborador', {
       title: 'Cambio de estado',
       type: 'Procedimiento',
-      area: 'PRO',
+      area: 'PRD',
       norma: 'ISO 9001:2015',
     });
     const code = doc.body.code as string;

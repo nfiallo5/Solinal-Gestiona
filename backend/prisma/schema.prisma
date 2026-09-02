@@ -302,6 +302,37 @@ model DocumentTypeCatalog {
   @@index([orden])
 }
 
+/// Process / area catalog — the backend-persisted form of Control
+/// Documental's "Procesos y áreas" table (the "Tipos y codificación" tab),
+/// which until now only lived in one browser's localStorage via
+/// `frontend/src/features/documents/controlConfigStore.ts`.
+///
+/// Unlike document type, the area code was never a Postgres enum — it is just
+/// the PROCESO segment of a control code (`PRO-CAL-009`). So this table is the
+/// single source of truth for both the "Área / Departamento" dropdown in
+/// Crear Documento and the `area` accepted by `POST /documents`: an admin adds
+/// "Logística" here and it is immediately pickable, instead of being rejected
+/// by a hardcoded list.
+model ProcessArea {
+  /// Stable short code used in the PROCESO segment of a control code, e.g.
+  /// "CAL". Uppercase by convention; matches `documentAreas` in the
+  /// frontend's docStyles.ts.
+  sigla String @id
+
+  /// Display name, editable by an Administrador from Control Documental —
+  /// e.g. "Aseguramiento de la calidad". Renaming does not change `sigla`.
+  nombre String
+
+  /// Display order in Control Documental's table / any dropdown built from
+  /// this catalog.
+  orden Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orden])
+}
+
 /// `AuditLogEntry` (seed.ts). Written ONLY by the server via
 /// `src/lib/audit.ts#writeAudit()` — never posted by the client.
 /// `user` and `role` are denormalized at write time on purpose: an audit row
