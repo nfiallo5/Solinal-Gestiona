@@ -4,7 +4,7 @@ import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
 import { codingRuleApi, documentTypesApi, processAreasApi } from "@/lib/api";
-import { queryKeys, useCodingRule, useProcessAreas } from "@/lib/queries";
+import { queryKeys, useCodingRule, useDocumentTypes, useProcessAreas } from "@/lib/queries";
 
 /* ================================================================
    SOLINAL · CONTROL DOCUMENTAL
@@ -997,12 +997,38 @@ export default function ControlDocumental() {
   }, [processAreasQuery.data]);
 
   /**
-   * "Tipos de información documentada" is now a real backend table
-   * (DocumentTypeCatalog, see backend/NOTES.md § 17) instead of
-   * localStorage — Crear Documento and Cumplimiento ISO both read it
-   * live via `useDocumentTypes()`. "Procesos y áreas" stays
-   * localStorage-only for now (saveControlCatalog), unrelated to this
-   * change.
+   * "Tipos de información documentada" (`cfg.tipos`) is backend-persisted via
+   * `/document-types` — the same catalog Crear Documento's type dropdown and
+   * Cumplimiento ISO read. Without this, editing a type here and saving
+   * persisted it, but re-opening Control Documental fell back to the
+   * hardcoded `TIPOS_INI` and looked like the change was lost. Loaded once
+   * so a background refetch never clobbers an edit in progress.
+   */
+  const documentTypesQuery = useDocumentTypes();
+  const appliedServerTipos = useRef(false);
+  useEffect(() => {
+    const tipos = documentTypesQuery.data;
+    if (!tipos || tipos.length === 0 || appliedServerTipos.current) return;
+    appliedServerTipos.current = true;
+    setCfg((c) => ({
+      ...c,
+      tipos: tipos.map((t) => ({
+        s: t.sigla,
+        n: t.nombre,
+        nivel: t.nivel,
+        digitos: t.digitos,
+        ret: t.retencion,
+        firma: t.firma,
+      })),
+    }));
+  }, [documentTypesQuery.data]);
+
+  /**
+   * "Guardar configuración" persists all three Control Documental catalogs
+   * to their backend tables (see backend/NOTES.md § 17): document types
+   * (`/document-types`), the coding rule (`/coding-rule`) and processes/areas
+   * (`/process-areas`). Each is re-hydrated on mount by the effects above,
+   * so a saved change survives leaving and re-opening this page.
    */
   async function handleGuardarConfiguracion() {
     setGuardando(true);
