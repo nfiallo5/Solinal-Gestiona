@@ -495,7 +495,7 @@ model DocumentHeaderConfig {
 
   /// Map of header-field key -> shown?, e.g. { "titulo": true, "codigo": true,
   /// "objetivo": false, ... }. The full key set is fixed by the route schema
-  /// (20 keys), mirroring the checkboxes in the "Encabezado" tab.
+  /// (16 keys), mirroring the checkboxes in the "Encabezado" tab.
   campos Json
 
   /// "completo" (full table border) or "suave" (soft lines).
@@ -503,6 +503,51 @@ model DocumentHeaderConfig {
 
   /// Repeat the header on every page (true) or only the first (false).
   repetir Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Singleton row (`id = 1`) backing Control Documental's "Pie de página" tab
+/// — the footer template (`tpl`) and its content fields. The old `cfg.footer`
+/// in `frontend/src/routes/ControlDocumental.jsx`, which only lived in that
+/// component's React state and reset on reload.
+///
+/// Like `DocumentHeaderConfig`, nothing consumes this at document-creation
+/// time yet — the document editor renders a fixed footer/signature block.
+/// This table just makes an admin's saved choice survive so the Control
+/// Documental preview and any future footer renderer read from one place.
+model DocumentFooterConfig {
+  id Int @id @default(1)
+
+  /// One of "firmasTabla" / "firmasManuscritas" / "clasificacion" / "barra" /
+  /// "vigor" (FOOTER_TPLS in ControlDocumental.jsx). Enforced by the route's
+  /// zod schema, not here.
+  tpl String @default("firmasTabla")
+
+  /// Confidentiality label shown in the footer, one of a fixed 4-option list
+  /// ("Documento de uso interno" / "Documento público" / "Confidencial" /
+  /// "Restringido").
+  clasificacion String @default("Documento de uso interno")
+
+  /// Free-text legend printed under the signature block, e.g. the
+  /// "COPIA NO CONTROLADA" warning. Always rendered when non-empty — no
+  /// separate on/off switch.
+  leyenda String @default("")
+
+  /// Show a QR code linking to the current controlled copy.
+  qr Boolean @default(true)
+
+  /// Show a SHA-256 hash + timestamp of the approved file.
+  hash Boolean @default(false)
+
+  /// Show the date/time the document was printed ("copia no controlada" aid).
+  impresion Boolean @default(true)
+
+  /// Show each signer's cargo next to their name.
+  mostrarCargo Boolean @default(true)
+
+  /// Show the signature date next to each signer.
+  mostrarFecha Boolean @default(true)
 
   updatedAt DateTime @updatedAt
 }

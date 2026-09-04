@@ -14,6 +14,7 @@ import {
   authApi,
   codingRuleApi,
   configApi,
+  documentFooterApi,
   documentHeaderApi,
   documentsApi,
   documentStructuresApi,
@@ -43,6 +44,7 @@ export const queryKeys = {
   processAreas: ["processAreas"] as const,
   documentStructures: ["documentStructures"] as const,
   documentHeader: ["documentHeader"] as const,
+  documentFooter: ["documentFooter"] as const,
   codingRule: ["codingRule"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
@@ -132,6 +134,16 @@ export function useDocumentHeader(enabled = true) {
   return useQuery({
     queryKey: queryKeys.documentHeader,
     queryFn: () => documentHeaderApi.get(),
+    enabled,
+  });
+}
+
+/** Control Documental's "Pie de página" tab — the saved footer template and
+ * content fields. */
+export function useDocumentFooter(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.documentFooter,
+    queryFn: () => documentFooterApi.get(),
     enabled,
   });
 }

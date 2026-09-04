@@ -706,7 +706,7 @@ export const documentStructuresApi = {
  * identification/description fields toggled on + table styling. Singleton,
  * backend-persisted (`/document-header`) instead of living only in the page's
  * React state (where it reset on every reload). `campos` carries exactly the
- * 20 keys the tab's checkboxes write to (`HEADER_CAMPO_KEYS` server-side).
+ * 16 keys the tab's checkboxes write to (`HEADER_CAMPO_KEYS` server-side).
  */
 export interface DocumentHeaderConfig {
   tpl: string;
@@ -720,6 +720,31 @@ export const documentHeaderApi = {
   /** Administrador only (enforced server-side). */
   save: (config: DocumentHeaderConfig) =>
     request<DocumentHeaderConfig>("/document-header", { method: "PUT", body: config }),
+};
+
+/**
+ * Control Documental's "Pie de página" tab — footer template + content
+ * fields (confidentiality label, print legend, and the QR / hash /
+ * print-timestamp / cargo / fecha switches). Singleton, backend-persisted
+ * (`/document-footer`) instead of living only in the page's React state
+ * (where it reset on every reload).
+ */
+export interface DocumentFooterConfig {
+  tpl: string;
+  clasificacion: string;
+  leyenda: string;
+  qr: boolean;
+  hash: boolean;
+  impresion: boolean;
+  mostrarCargo: boolean;
+  mostrarFecha: boolean;
+}
+
+export const documentFooterApi = {
+  get: () => request<DocumentFooterConfig>("/document-footer"),
+  /** Administrador only (enforced server-side). */
+  save: (config: DocumentFooterConfig) =>
+    request<DocumentFooterConfig>("/document-footer", { method: "PUT", body: config }),
 };
 
 /** One of the 6 segment kinds the "Regla de codificación" builder combines

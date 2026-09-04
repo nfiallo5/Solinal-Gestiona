@@ -29,6 +29,7 @@ import { documentTypesRouter } from './routes/documentTypes.js';
 import { processAreasRouter } from './routes/processAreas.js';
 import { documentStructuresRouter } from './routes/documentStructures.js';
 import { documentHeaderRouter } from './routes/documentHeader.js';
+import { documentFooterRouter } from './routes/documentFooter.js';
 import { aiRouter } from './routes/ai.js';
 import { codingRuleRouter } from './routes/codingRule.js';
 
@@ -75,6 +76,7 @@ export function createApp(): Express {
   app.use('/process-areas', processAreasRouter);
   app.use('/document-structures', documentStructuresRouter);
   app.use('/document-header', documentHeaderRouter);
+  app.use('/document-footer', documentFooterRouter);
   app.use('/coding-rule', codingRuleRouter);
   // ===== END ROUTES ========================================================
 

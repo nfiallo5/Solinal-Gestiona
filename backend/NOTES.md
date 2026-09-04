@@ -219,7 +219,7 @@ the `package.json#prisma.seed` config in favour of `prisma.config.ts` (the CLI
 already warns about it on every command). Upgrading is a separate, deliberate
 task — do not bump it as a side effect of adding a route.
 
-### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection` + `DocumentHeaderConfig`
+### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection` + `DocumentHeaderConfig` + `DocumentFooterConfig`
 
 Both of Control Documental's "Tipos y codificación" catalogs are real
 backend tables now, read/written through routes, and both feed
@@ -239,9 +239,9 @@ backend tables now, read/written through routes, and both feed
   via `assertAreaExists`; `zAreaCode` is just a shape check now, not a
   fixed `z.enum`.
 
-Control Documental's **"Estructuras documentales"** and **"Encabezado"**
-tabs are also backend-persisted now, but neither feeds `POST /documents` —
-they are editor-only config:
+Control Documental's **"Estructuras documentales"**, **"Encabezado"** and
+**"Pie de página"** tabs are also backend-persisted now, but none feeds
+`POST /documents` — they are editor-only config:
 
 - **`DocumentStructureSection`** (`/document-structures`, migration
   `20260903225600`). The per-type recommended section list — the old
@@ -269,16 +269,27 @@ they are editor-only config:
   layouts rendered `medio` or `proximaRevision` at all, and `idioma` /
   `clasificacion` only fed one preview line each, reading from `cfg.ctrl`
   / `cfg.footer` respectively (unrelated config, untouched).
+- **`DocumentFooterConfig`** (`/document-footer`, migration
+  `20260904154412`). Singleton (`id = 1`, same pattern as `CodingRule`,
+  not `DocumentHeaderConfig`'s JSON blob — the footer's field set is small
+  and fixed, so it's plain typed columns): the footer template `tpl`,
+  `clasificacion` (confidentiality label, one of 4), `leyenda` (free-text
+  print legend), and the `qr` / `hash` / `impresion` / `mostrarCargo` /
+  `mostrarFecha` switches. `GET` falls back to `DEFAULT_FOOTER_CONFIG`
+  (`src/lib/footerConfig.ts`) when unseeded. `PUT` is an
+  Administrador-only upsert, audited as `"Actualizó la plantilla de pie
+  de página de documentos"`. The document editor still renders a fixed
+  signature block — this table only backs the Control Documental preview.
 
 Frontend: `useDocumentTypes()` / `useProcessAreas()` feed
 `CreateDocumentDialog`'s dropdowns and the Documentos type filter;
-`useDocumentStructures()` / `useDocumentHeader()` feed only their
-respective Control Documental tabs. `ControlDocumental.jsx` loads all
-five (types, areas, coding rule, structures, header) on mount via one-shot
-`appliedServer*` effects and persists them together in "Guardar
-configuración". `docStyles.ts` badge colors still key off the canonical 5
-— `docTypeBadgeClass()` returns a neutral badge for any other catalog
-type.
+`useDocumentStructures()` / `useDocumentHeader()` / `useDocumentFooter()`
+feed only their respective Control Documental tabs. `ControlDocumental.jsx`
+loads all six (types, areas, coding rule, structures, header, footer) on
+mount via one-shot `appliedServer*` effects and persists them together in
+"Guardar configuración". `docStyles.ts` badge colors still key off the
+canonical 5 — `docTypeBadgeClass()` returns a neutral badge for any other
+catalog type.
 
 Known limitation: `areaFromCode()` (the Área badge in `MetadataForm.tsx`)
 still parses segment 1 of the code, so it only resolves for codes

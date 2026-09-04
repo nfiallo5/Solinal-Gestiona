@@ -32,6 +32,7 @@ import type {
   CodingRule,
   Document,
   DocumentComment,
+  DocumentFooterConfig,
   DocumentHeaderConfig,
   DocumentRevision,
   DocumentSignature,
@@ -231,6 +232,19 @@ export interface DocumentHeaderConfigDTO {
   repetir: boolean;
 }
 
+/** Mirrors the Prisma `DocumentFooterConfig` singleton row — Control
+ * Documental's "Pie de página" tab. */
+export interface DocumentFooterConfigDTO {
+  tpl: string;
+  clasificacion: string;
+  leyenda: string;
+  qr: boolean;
+  hash: boolean;
+  impresion: boolean;
+  mostrarCargo: boolean;
+  mostrarFecha: boolean;
+}
+
 /** Mirrors the Prisma `CodingRule` singleton row — see documentCode.ts. */
 export interface CodingRuleDTO {
   tokens: string[];
@@ -421,6 +435,21 @@ export function serializeDocumentHeaderConfig(
     campos: c.campos as Record<string, boolean>,
     bordes: c.bordes,
     repetir: c.repetir,
+  };
+}
+
+export function serializeDocumentFooterConfig(
+  f: DocumentFooterConfig,
+): DocumentFooterConfigDTO {
+  return {
+    tpl: f.tpl,
+    clasificacion: f.clasificacion,
+    leyenda: f.leyenda,
+    qr: f.qr,
+    hash: f.hash,
+    impresion: f.impresion,
+    mostrarCargo: f.mostrarCargo,
+    mostrarFecha: f.mostrarFecha,
   };
 }
 

@@ -596,6 +596,27 @@ async function main(): Promise<void> {
   });
   console.log('  header config:    1');
 
+  // --- Document footer config --------------------------------------------
+  // Matches DEFAULT.footer in ControlDocumental.jsx, so seeding this row
+  // changes nothing until an Administrador edits the "Pie de página" tab.
+  const seedFooterConfig = {
+    tpl: 'firmasTabla',
+    clasificacion: 'Documento de uso interno',
+    leyenda:
+      '“COPIA NO CONTROLADA”: el departamento de Calidad no garantiza que esta impresión sea la última versión del documento.',
+    qr: true,
+    hash: false,
+    impresion: true,
+    mostrarCargo: true,
+    mostrarFecha: true,
+  };
+  await prisma.documentFooterConfig.upsert({
+    where: { id: 1 },
+    create: { id: 1, ...seedFooterConfig },
+    update: seedFooterConfig,
+  });
+  console.log('  footer config:    1');
+
   // --- Regulation alert ---------------------------------------------------
   // Replaces the hardcoded consts in src/features/editor/aiEngine.ts.
   await prisma.regulationAlert.upsert({

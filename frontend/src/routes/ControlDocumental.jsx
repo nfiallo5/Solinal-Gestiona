@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
 import {
   codingRuleApi,
+  documentFooterApi,
   documentHeaderApi,
   documentStructuresApi,
   documentTypesApi,
@@ -13,6 +14,7 @@ import {
 import {
   queryKeys,
   useCodingRule,
+  useDocumentFooter,
   useDocumentHeader,
   useDocumentStructures,
   useDocumentTypes,
@@ -1087,12 +1089,33 @@ export default function ControlDocumental() {
   }, [documentHeaderQuery.data]);
 
   /**
+   * "Pie de página" (`cfg.footer`) is backend-persisted via
+   * `/document-footer` — the footer template (`tpl`) and its content fields
+   * (confidentiality label, print legend, and the QR / hash /
+   * print-timestamp / cargo / fecha switches). Same shape on both sides, so
+   * this is a direct assignment. Loaded once so a background refetch never
+   * clobbers an edit in progress.
+   */
+  const documentFooterQuery = useDocumentFooter();
+  const appliedServerFooter = useRef(false);
+  useEffect(() => {
+    const ftr = documentFooterQuery.data;
+    if (!ftr || appliedServerFooter.current) return;
+    appliedServerFooter.current = true;
+    setCfg((c) => ({
+      ...c,
+      footer: { ...c.footer, ...ftr },
+    }));
+  }, [documentFooterQuery.data]);
+
+  /**
    * "Guardar configuración" persists every Control Documental catalog to its
    * backend table (see backend/NOTES.md § 17): document types
    * (`/document-types`), the coding rule (`/coding-rule`), processes/areas
    * (`/process-areas`), the per-type section outlines
-   * (`/document-structures`) and the header template + fields
-   * (`/document-header`). Each is re-hydrated on mount by the effects above,
+   * (`/document-structures`), the header template + fields
+   * (`/document-header`) and the footer template + content fields
+   * (`/document-footer`). Each is re-hydrated on mount by the effects above,
    * so a saved change survives leaving and re-opening this page.
    */
   async function handleGuardarConfiguracion() {
@@ -1152,6 +1175,20 @@ export default function ControlDocumental() {
         repetir: cfg.header.repetir,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.documentHeader });
+      // Persists the "Pie de página" tab server-side — the footer template and
+      // its content fields, so the choice survives reload (nothing renders
+      // documents from it yet, same as the header).
+      await documentFooterApi.save({
+        tpl: cfg.footer.tpl,
+        clasificacion: cfg.footer.clasificacion,
+        leyenda: cfg.footer.leyenda,
+        qr: cfg.footer.qr,
+        hash: cfg.footer.hash,
+        impresion: cfg.footer.impresion,
+        mostrarCargo: cfg.footer.mostrarCargo,
+        mostrarFecha: cfg.footer.mostrarFecha,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.documentFooter });
       flash("Configuración guardada y aplicada a la biblioteca documental.");
     } catch (err) {
       flash(err instanceof Error ? err.message : "No se pudo guardar la configuración.");
