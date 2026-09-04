@@ -255,14 +255,20 @@ they are editor-only config:
   Nothing reads these outlines at document-creation time yet.
 - **`DocumentHeaderConfig`** (`/document-header`, migration
   `20260903232431`). Singleton (`id = 1`, same pattern as `CodingRule`):
-  the header template `tpl`, the `campos` map of the 20 header fields
+  the header template `tpl`, the `campos` map of the 16 header fields
   toggled on/off, and `bordes` / `repetir`. `GET` falls back to
   `DEFAULT_HEADER_CONFIG` (`src/lib/headerConfig.ts`) when unseeded. `PUT`
-  is an Administrador-only upsert, `campos` validated as exactly the 20
+  is an Administrador-only upsert, `campos` validated as exactly the 16
   known keys (`.strict()`), audited as `"Actualizó la plantilla de
   encabezado de documentos"`. The document editor (`ContentEditor.tsx`)
   still renders a fixed header layout — this table only backs the Control
-  Documental preview and any future header renderer.
+  Documental preview and any future header renderer. `idioma` / `medio` /
+  `clasificacion` / `proximaRevision` were dropped from
+  "Identificación y descripción" (migration
+  `20260904152133_drop_document_header_fields`) — none of the 5 header
+  layouts rendered `medio` or `proximaRevision` at all, and `idioma` /
+  `clasificacion` only fed one preview line each, reading from `cfg.ctrl`
+  / `cfg.footer` respectively (unrelated config, untouched).
 
 Frontend: `useDocumentTypes()` / `useProcessAreas()` feed
 `CreateDocumentDialog`'s dropdowns and the Documentos type filter;

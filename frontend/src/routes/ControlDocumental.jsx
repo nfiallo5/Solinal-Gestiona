@@ -627,8 +627,8 @@ const DEFAULT = {
     campos: {
       logo: true, razonSocial: true, titulo: true, tipoDoc: true, proceso: true, codigo: true,
       version: true, fechaElaboracion: true, fechaRevision: true, fechaAprobacion: false,
-      vigencia: true, proximaRevision: false, pagina: true, responsable: true, autor: true,
-      objetivo: false, clasificacion: false, idioma: false, medio: false, estado: true,
+      vigencia: true, pagina: true, responsable: true, autor: true,
+      objetivo: false, estado: true,
     },
     bordes: "completo", repetir: true,
   },
@@ -787,8 +787,6 @@ function Encabezado({ cfg, doc }) {
       {(C.responsable || C.autor) && <tr><td colSpan={4}>
         {C.responsable && <><span className="lbl">Cargo responsable:</span> {doc.responsable}</>}
         {C.autor && <> · <span className="lbl">Autor:</span> M. Mantilla</>}
-        {C.idioma && <> · <span className="lbl">Idioma:</span> {cfg.ctrl.idioma}</>}
-        {C.clasificacion && <> · <span className="lbl">Clasificación:</span> {cfg.footer.clasificacion}</>}
       </td></tr>}
       {C.objetivo && <tr><td colSpan={4} style={{ fontSize: 9.5 }}><span className="lbl">Objetivo:</span> {doc.objetivo}</td></tr>}
     </tbody></table>
@@ -814,7 +812,6 @@ function Encabezado({ cfg, doc }) {
         <td colSpan={C.razonSocial ? 2 : 1} style={{ fontSize: 9.5 }}>
           {C.responsable && <><span className="lbl">Responsable:</span> {doc.responsable}</>}
           {C.estado && <> · <span className="lbl">Estado:</span> Vigente</>}
-          {C.proximaRevision && <> · <span className="lbl">Próxima revisión:</span> {fmtFecha("MMM-AAAA")}</>}
         </td>
         <td>{C.pagina && <><span className="lbl">Página:</span> 1 de 8</>}</td>
       </tr>
@@ -1760,14 +1757,14 @@ export default function ControlDocumental() {
                 </div>
                 <h3 style={{ marginTop: 20 }}>Formato y medio</h3>
                 <div className="checks">
-                  {[["idioma", "Idioma"], ["medio", "Medio de soporte"], ["clasificacion", "Clasificación"], ["objetivo", "Objetivo"],
+                  {[["objetivo", "Objetivo"],
                   ["logo", "Logo"], ["razonSocial", "Razón social"]].map(([k, l]) => (
                     <label className="chk" key={k}><input type="checkbox" checked={cfg.header.campos[k]} onChange={(e) => up(`header.campos.${k}`, e.target.checked)} />{l}</label>
                   ))}
                 </div>
                 <h3 style={{ marginTop: 20 }}>Estado y vigencia</h3>
                 <div className="checks">
-                  {[["estado", "Estado del documento"], ["vigencia", "Fecha de vigencia"], ["proximaRevision", "Próxima revisión"], ["pagina", "Página X de Y"]].map(([k, l]) => (
+                  {[["estado", "Estado del documento"], ["vigencia", "Fecha de vigencia"], ["pagina", "Página X de Y"]].map(([k, l]) => (
                     <label className="chk" key={k}><input type="checkbox" checked={cfg.header.campos[k]} onChange={(e) => up(`header.campos.${k}`, e.target.checked)} />{l}</label>
                   ))}
                 </div>

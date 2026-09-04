@@ -585,9 +585,8 @@ async function main(): Promise<void> {
     campos: {
       titulo: true, codigo: true, version: true, fechaElaboracion: true,
       fechaRevision: true, fechaAprobacion: false, autor: true, responsable: true,
-      proceso: true, tipoDoc: true, idioma: false, medio: false, clasificacion: false,
-      objetivo: false, logo: true, razonSocial: true, estado: true, vigencia: true,
-      proximaRevision: false, pagina: true,
+      proceso: true, tipoDoc: true, objetivo: false, logo: true, razonSocial: true,
+      estado: true, vigencia: true, pagina: true,
     },
   };
   await prisma.documentHeaderConfig.upsert({

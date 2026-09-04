@@ -83,7 +83,12 @@ describe('GET /document-header', () => {
     expect(res.body).toMatchObject({ tpl: 'tripartito', bordes: 'completo', repetir: true });
     expect(res.body.campos.titulo).toBe(true);
     expect(res.body.campos.objetivo).toBe(false);
-    expect(Object.keys(res.body.campos)).toHaveLength(20);
+    expect(Object.keys(res.body.campos)).toHaveLength(16);
+    // Idioma / medio / clasificación / próxima revisión were dropped.
+    expect(res.body.campos).not.toHaveProperty('idioma');
+    expect(res.body.campos).not.toHaveProperty('medio');
+    expect(res.body.campos).not.toHaveProperty('clasificacion');
+    expect(res.body.campos).not.toHaveProperty('proximaRevision');
   });
 
   it('is readable by a Lector', async () => {
@@ -164,6 +169,17 @@ describe('PUT /document-header', () => {
     expect(res.status).toBe(400);
   });
 
+  it('400s the dropped campos keys (idioma, medio, clasificacion, proximaRevision)', async () => {
+    const res = await request(app)
+      .put('/document-header')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        ...original,
+        campos: { ...original.campos, idioma: false, medio: false, clasificacion: false, proximaRevision: false },
+      });
+    expect(res.status).toBe(400);
+  });
+
   it('400s a campos object missing a key', async () => {
     const partial = { ...original.campos };
     delete partial.titulo;
@@ -193,7 +209,7 @@ describe('an edited header config survives a round-trip', () => {
       tpl: 'proceso',
       bordes: original.bordes,
       repetir: original.repetir,
-      campos: { ...original.campos, idioma: true, medio: true },
+      campos: { ...original.campos, objetivo: true, fechaAprobacion: true },
     };
 
     const put = await request(app)
@@ -207,8 +223,8 @@ describe('an edited header config survives a round-trip', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(get.status).toBe(200);
     expect(get.body.tpl).toBe('proceso');
-    expect(get.body.campos.idioma).toBe(true);
-    expect(get.body.campos.medio).toBe(true);
+    expect(get.body.campos.objetivo).toBe(true);
+    expect(get.body.campos.fechaAprobacion).toBe(true);
 
     await restoreOriginal();
   });

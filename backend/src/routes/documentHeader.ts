@@ -59,9 +59,11 @@ documentHeaderRouter.get(
 // ---------------------------------------------------------------------------
 
 /**
- * Exactly the 20 header-field keys the "Encabezado" tab toggles — no more, no
- * less (`.strict()`). Keep in sync with `HEADER_CAMPO_KEYS` in
- * `lib/headerConfig.ts` and the migration's seed JSON.
+ * Exactly the 16 header-field keys the "Encabezado" tab toggles — no more, no
+ * less (`.strict()`). Idioma / medio / clasificación / próxima revisión were
+ * dropped from "Identificación y descripción" (migration
+ * `20260904152133_drop_document_header_fields`). Keep in sync with
+ * `HEADER_CAMPO_KEYS` in `lib/headerConfig.ts` and `prisma/seed.ts`.
  */
 const zCampos = z
   .object({
@@ -75,15 +77,11 @@ const zCampos = z
     responsable: z.boolean(),
     proceso: z.boolean(),
     tipoDoc: z.boolean(),
-    idioma: z.boolean(),
-    medio: z.boolean(),
-    clasificacion: z.boolean(),
     objetivo: z.boolean(),
     logo: z.boolean(),
     razonSocial: z.boolean(),
     estado: z.boolean(),
     vigencia: z.boolean(),
-    proximaRevision: z.boolean(),
     pagina: z.boolean(),
   })
   .strict();
