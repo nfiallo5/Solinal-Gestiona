@@ -32,6 +32,7 @@ import type {
   CodingRule,
   Document,
   DocumentComment,
+  DocumentHeaderConfig,
   DocumentRevision,
   DocumentSignature,
   DocumentStructureSection,
@@ -220,6 +221,16 @@ export interface DocumentStructureSectionDTO {
   activa: boolean;
 }
 
+/** Mirrors the Prisma `DocumentHeaderConfig` singleton row — Control
+ * Documental's "Encabezado" tab. `campos` keys are fixed by
+ * `HEADER_CAMPO_KEYS` in `lib/headerConfig.ts`. */
+export interface DocumentHeaderConfigDTO {
+  tpl: string;
+  campos: Record<string, boolean>;
+  bordes: string;
+  repetir: boolean;
+}
+
 /** Mirrors the Prisma `CodingRule` singleton row — see documentCode.ts. */
 export interface CodingRuleDTO {
   tokens: string[];
@@ -398,6 +409,19 @@ export function serializeDocumentStructures(
     (out[row.tipoSigla] ??= []).push({ titulo: row.titulo, activa: row.activa });
   }
   return out;
+}
+
+export function serializeDocumentHeaderConfig(
+  c: DocumentHeaderConfig,
+): DocumentHeaderConfigDTO {
+  return {
+    tpl: c.tpl,
+    // Stored as JSONB; the route validates the shape on write, so a read is a
+    // plain cast.
+    campos: c.campos as Record<string, boolean>,
+    bordes: c.bordes,
+    repetir: c.repetir,
+  };
 }
 
 export function serializeCodingRule(r: CodingRule): CodingRuleDTO {

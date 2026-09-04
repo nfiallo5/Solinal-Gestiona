@@ -28,6 +28,7 @@ import { regulationAlertsRouter } from './routes/regulationAlerts.js';
 import { documentTypesRouter } from './routes/documentTypes.js';
 import { processAreasRouter } from './routes/processAreas.js';
 import { documentStructuresRouter } from './routes/documentStructures.js';
+import { documentHeaderRouter } from './routes/documentHeader.js';
 import { aiRouter } from './routes/ai.js';
 import { codingRuleRouter } from './routes/codingRule.js';
 
@@ -73,6 +74,7 @@ export function createApp(): Express {
   app.use('/document-types', documentTypesRouter);
   app.use('/process-areas', processAreasRouter);
   app.use('/document-structures', documentStructuresRouter);
+  app.use('/document-header', documentHeaderRouter);
   app.use('/coding-rule', codingRuleRouter);
   // ===== END ROUTES ========================================================
 

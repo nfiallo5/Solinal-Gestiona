@@ -219,7 +219,7 @@ the `package.json#prisma.seed` config in favour of `prisma.config.ts` (the CLI
 already warns about it on every command). Upgrading is a separate, deliberate
 task — do not bump it as a side effect of adding a route.
 
-### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection`
+### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection` + `DocumentHeaderConfig`
 
 Both of Control Documental's "Tipos y codificación" catalogs are real
 backend tables now, read/written through routes, and both feed
@@ -239,9 +239,9 @@ backend tables now, read/written through routes, and both feed
   via `assertAreaExists`; `zAreaCode` is just a shape check now, not a
   fixed `z.enum`.
 
-Control Documental's **"Estructuras documentales"** tab is also
-backend-persisted now, but it does NOT feed `POST /documents` — it is an
-editor-only outline:
+Control Documental's **"Estructuras documentales"** and **"Encabezado"**
+tabs are also backend-persisted now, but neither feeds `POST /documents` —
+they are editor-only config:
 
 - **`DocumentStructureSection`** (`/document-structures`, migration
   `20260903225600`). The per-type recommended section list — the old
@@ -253,15 +253,26 @@ editor-only outline:
   audited as `"Actualizó las estructuras documentales por tipo"`. No FK to
   `DocumentTypeCatalog` — a renamed/removed type just stops appearing.
   Nothing reads these outlines at document-creation time yet.
+- **`DocumentHeaderConfig`** (`/document-header`, migration
+  `20260903232431`). Singleton (`id = 1`, same pattern as `CodingRule`):
+  the header template `tpl`, the `campos` map of the 20 header fields
+  toggled on/off, and `bordes` / `repetir`. `GET` falls back to
+  `DEFAULT_HEADER_CONFIG` (`src/lib/headerConfig.ts`) when unseeded. `PUT`
+  is an Administrador-only upsert, `campos` validated as exactly the 20
+  known keys (`.strict()`), audited as `"Actualizó la plantilla de
+  encabezado de documentos"`. The document editor (`ContentEditor.tsx`)
+  still renders a fixed header layout — this table only backs the Control
+  Documental preview and any future header renderer.
 
 Frontend: `useDocumentTypes()` / `useProcessAreas()` feed
 `CreateDocumentDialog`'s dropdowns and the Documentos type filter;
-`useDocumentStructures()` feeds only the Estructuras tab.
-`ControlDocumental.jsx` loads all four (types, areas, coding rule,
-structures) on mount via one-shot `appliedServer*` effects and persists
-them together in "Guardar configuración". `docStyles.ts` badge colors
-still key off the canonical 5 — `docTypeBadgeClass()` returns a neutral
-badge for any other catalog type.
+`useDocumentStructures()` / `useDocumentHeader()` feed only their
+respective Control Documental tabs. `ControlDocumental.jsx` loads all
+five (types, areas, coding rule, structures, header) on mount via one-shot
+`appliedServer*` effects and persists them together in "Guardar
+configuración". `docStyles.ts` badge colors still key off the canonical 5
+— `docTypeBadgeClass()` returns a neutral badge for any other catalog
+type.
 
 Known limitation: `areaFromCode()` (the Área badge in `MetadataForm.tsx`)
 still parses segment 1 of the code, so it only resolves for codes

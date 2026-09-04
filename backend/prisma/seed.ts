@@ -575,6 +575,28 @@ async function main(): Promise<void> {
   });
   console.log('  coding rule:      1');
 
+  // --- Document header config --------------------------------------------
+  // Matches DEFAULT.header in ControlDocumental.jsx, so seeding this row
+  // changes nothing until an Administrador edits the "Encabezado" tab.
+  const seedHeaderConfig = {
+    tpl: 'tripartito',
+    bordes: 'completo',
+    repetir: true,
+    campos: {
+      titulo: true, codigo: true, version: true, fechaElaboracion: true,
+      fechaRevision: true, fechaAprobacion: false, autor: true, responsable: true,
+      proceso: true, tipoDoc: true, idioma: false, medio: false, clasificacion: false,
+      objetivo: false, logo: true, razonSocial: true, estado: true, vigencia: true,
+      proximaRevision: false, pagina: true,
+    },
+  };
+  await prisma.documentHeaderConfig.upsert({
+    where: { id: 1 },
+    create: { id: 1, ...seedHeaderConfig },
+    update: seedHeaderConfig,
+  });
+  console.log('  header config:    1');
+
   // --- Regulation alert ---------------------------------------------------
   // Replaces the hardcoded consts in src/features/editor/aiEngine.ts.
   await prisma.regulationAlert.upsert({
