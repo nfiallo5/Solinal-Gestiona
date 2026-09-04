@@ -3,10 +3,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
-import { codingRuleApi, documentStructuresApi, documentTypesApi, processAreasApi } from "@/lib/api";
+import {
+  codingRuleApi,
+  documentHeaderApi,
+  documentStructuresApi,
+  documentTypesApi,
+  processAreasApi,
+} from "@/lib/api";
 import {
   queryKeys,
   useCodingRule,
+  useDocumentHeader,
   useDocumentStructures,
   useDocumentTypes,
   useProcessAreas,
@@ -1056,12 +1063,40 @@ export default function ControlDocumental() {
   }, [documentStructuresQuery.data]);
 
   /**
+   * "Encabezado" (`cfg.header`) is backend-persisted via `/document-header` —
+   * the header template (`tpl`), the identification/description fields toggled
+   * on (`campos`) and the table styling (`bordes` / `repetir`). Same shape on
+   * both sides, so this is close to a direct assignment; `campos` is merged
+   * over the local defaults so a key the server somehow omits keeps its
+   * default. Loaded once so a background refetch never clobbers an edit in
+   * progress.
+   */
+  const documentHeaderQuery = useDocumentHeader();
+  const appliedServerHeader = useRef(false);
+  useEffect(() => {
+    const hdr = documentHeaderQuery.data;
+    if (!hdr || appliedServerHeader.current) return;
+    appliedServerHeader.current = true;
+    setCfg((c) => ({
+      ...c,
+      header: {
+        ...c.header,
+        tpl: hdr.tpl,
+        bordes: hdr.bordes,
+        repetir: hdr.repetir,
+        campos: { ...c.header.campos, ...hdr.campos },
+      },
+    }));
+  }, [documentHeaderQuery.data]);
+
+  /**
    * "Guardar configuración" persists every Control Documental catalog to its
    * backend table (see backend/NOTES.md § 17): document types
    * (`/document-types`), the coding rule (`/coding-rule`), processes/areas
-   * (`/process-areas`) and the per-type section outlines
-   * (`/document-structures`). Each is re-hydrated on mount by the effects
-   * above, so a saved change survives leaving and re-opening this page.
+   * (`/process-areas`), the per-type section outlines
+   * (`/document-structures`) and the header template + fields
+   * (`/document-header`). Each is re-hydrated on mount by the effects above,
+   * so a saved change survives leaving and re-opening this page.
    */
   async function handleGuardarConfiguracion() {
     setGuardando(true);
@@ -1110,6 +1145,16 @@ export default function ControlDocumental() {
         ),
       );
       await queryClient.invalidateQueries({ queryKey: queryKeys.documentStructures });
+      // Persists the "Encabezado" tab server-side — the header template and the
+      // identification/description fields checked on, so the choice survives
+      // reload (nothing renders documents from it yet).
+      await documentHeaderApi.save({
+        tpl: cfg.header.tpl,
+        campos: cfg.header.campos,
+        bordes: cfg.header.bordes,
+        repetir: cfg.header.repetir,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.documentHeader });
       flash("Configuración guardada y aplicada a la biblioteca documental.");
     } catch (err) {
       flash(err instanceof Error ? err.message : "No se pudo guardar la configuración.");

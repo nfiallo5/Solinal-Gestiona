@@ -474,6 +474,39 @@ model CodingRule {
   updatedAt DateTime @updatedAt
 }
 
+/// Singleton row (`id = 1`) backing Control Documental's "Encabezado" tab —
+/// the header template (`tpl`), the identification/description fields toggled
+/// on (`campos`), and the table styling (`bordes` / `repetir`). The old
+/// `cfg.header` in `frontend/src/routes/ControlDocumental.jsx`, which only
+/// lived in that component's React state and reset on reload.
+///
+/// Like the section outlines (`DocumentStructureSection`), nothing consumes
+/// this at document-creation time yet — the document editor
+/// (`ContentEditor.tsx`) renders a fixed header layout. This table just makes
+/// an admin's saved choice survive so the Control Documental preview and any
+/// future header renderer read from one place.
+model DocumentHeaderConfig {
+  id Int @id @default(1)
+
+  /// One of "tripartito" / "proceso" / "institucional" / "manual" / "linea"
+  /// (HEADER_TPLS in ControlDocumental.jsx). Enforced by the route's zod
+  /// schema, not here.
+  tpl String @default("tripartito")
+
+  /// Map of header-field key -> shown?, e.g. { "titulo": true, "codigo": true,
+  /// "objetivo": false, ... }. The full key set is fixed by the route schema
+  /// (20 keys), mirroring the checkboxes in the "Encabezado" tab.
+  campos Json
+
+  /// "completo" (full table border) or "suave" (soft lines).
+  bordes String @default("completo")
+
+  /// Repeat the header on every page (true) or only the first (false).
+  repetir Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Auth / lockout
 // ---------------------------------------------------------------------------

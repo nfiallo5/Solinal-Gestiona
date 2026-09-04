@@ -14,6 +14,7 @@ import {
   authApi,
   codingRuleApi,
   configApi,
+  documentHeaderApi,
   documentsApi,
   documentStructuresApi,
   documentTypesApi,
@@ -41,6 +42,7 @@ export const queryKeys = {
   documentTypes: ["documentTypes"] as const,
   processAreas: ["processAreas"] as const,
   documentStructures: ["documentStructures"] as const,
+  documentHeader: ["documentHeader"] as const,
   codingRule: ["codingRule"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
@@ -120,6 +122,16 @@ export function useDocumentStructures(enabled = true) {
   return useQuery({
     queryKey: queryKeys.documentStructures,
     queryFn: () => documentStructuresApi.list(),
+    enabled,
+  });
+}
+
+/** Control Documental's "Encabezado" tab — the saved header template and the
+ * identification/description fields toggled on. */
+export function useDocumentHeader(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.documentHeader,
+    queryFn: () => documentHeaderApi.get(),
     enabled,
   });
 }

@@ -147,7 +147,7 @@ describe('PUT /document-structures', () => {
     });
     expect(pro.map((r) => r.titulo)).toEqual(['Propósito', 'Alcance', 'Anexos']);
     expect(pro.map((r) => r.orden)).toEqual([0, 1, 2]);
-    expect(pro[2].activa).toBe(false);
+    expect(pro.map((r) => r.activa)).toEqual([true, true, false]);
 
     const entry = await auditSince(since, 'Actualizó las estructuras documentales por tipo');
     expect(entry).not.toBeNull();
@@ -214,7 +214,7 @@ describe('an edited outline survives a round-trip', () => {
     const edited: StructureMap = {
       ...original,
       INS: [
-        ...original.INS.filter((s) => s.titulo !== 'Anexos'),
+        ...(original.INS ?? []).filter((s) => s.titulo !== 'Anexos'),
         { titulo: 'Lecciones aprendidas', activa: true },
       ],
     };
@@ -229,7 +229,7 @@ describe('an edited outline survives a round-trip', () => {
       .get('/document-structures')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(get.status).toBe(200);
-    const ins = (get.body as StructureMap).INS.map((s) => s.titulo);
+    const ins = ((get.body as StructureMap).INS ?? []).map((s) => s.titulo);
     expect(ins).toContain('Lecciones aprendidas');
     expect(ins).not.toContain('Anexos');
 
