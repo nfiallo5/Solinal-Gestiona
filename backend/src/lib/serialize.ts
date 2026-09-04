@@ -34,6 +34,7 @@ import type {
   DocumentComment,
   DocumentRevision,
   DocumentSignature,
+  DocumentStructureSection,
   DocumentTemplate,
   DocumentTypeCatalog,
   OrgConfig,
@@ -211,6 +212,14 @@ export interface ProcessAreaDTO {
   orden: number;
 }
 
+/** One section of a document type's recommended outline — Control
+ * Documental's "Estructuras documentales" tab. Grouped by `tipoSigla` and
+ * served as a `Record<tipoSigla, DocumentStructureSectionDTO[]>`. */
+export interface DocumentStructureSectionDTO {
+  titulo: string;
+  activa: boolean;
+}
+
 /** Mirrors the Prisma `CodingRule` singleton row — see documentCode.ts. */
 export interface CodingRuleDTO {
   tokens: string[];
@@ -376,6 +385,19 @@ export function serializeProcessArea(a: ProcessArea): ProcessAreaDTO {
     nombre: a.nombre,
     orden: a.orden,
   };
+}
+
+/** Groups flat `DocumentStructureSection` rows into the per-type map the
+ * "Estructuras documentales" tab consumes. Assumes `rows` is already ordered
+ * by `orden` within each `tipoSigla`. */
+export function serializeDocumentStructures(
+  rows: DocumentStructureSection[],
+): Record<string, DocumentStructureSectionDTO[]> {
+  const out: Record<string, DocumentStructureSectionDTO[]> = {};
+  for (const row of rows) {
+    (out[row.tipoSigla] ??= []).push({ titulo: row.titulo, activa: row.activa });
+  }
+  return out;
 }
 
 export function serializeCodingRule(r: CodingRule): CodingRuleDTO {

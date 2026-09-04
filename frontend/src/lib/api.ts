@@ -679,6 +679,28 @@ export const processAreasApi = {
     request<ProcessAreaEntry[]>("/process-areas", { method: "PUT", body: items }),
 };
 
+/** One section of a document type's recommended outline. */
+export interface DocumentStructureSection {
+  titulo: string;
+  activa: boolean;
+}
+
+/** The per-type outline map — keyed by document-type sigla ("PRO", "POL", …),
+ * mirroring `cfg.estructuras` in Control Documental. */
+export type DocumentStructureMap = Record<string, DocumentStructureSection[]>;
+
+/**
+ * Control Documental's "Estructuras documentales" tab, now backend-persisted
+ * (`/document-structures`) instead of living only in the page's React state
+ * (where it reset on every reload). Replace-all: `save` sends the whole map.
+ */
+export const documentStructuresApi = {
+  list: () => request<DocumentStructureMap>("/document-structures"),
+  /** Administrador only (enforced server-side). */
+  save: (map: DocumentStructureMap) =>
+    request<DocumentStructureMap>("/document-structures", { method: "PUT", body: map }),
+};
+
 /** One of the 6 segment kinds the "Regla de codificación" builder combines
  * — matches `CODING_TOKENS` in backend/src/lib/documentCode.ts. */
 export type CodingToken = "SIGLA" | "TIPO" | "PROCESO" | "CORRELATIVO" | "ANIO" | "VERSION";

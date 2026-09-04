@@ -3,8 +3,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppState } from "@/context/AppStateContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
-import { codingRuleApi, documentTypesApi, processAreasApi } from "@/lib/api";
-import { queryKeys, useCodingRule, useDocumentTypes, useProcessAreas } from "@/lib/queries";
+import { codingRuleApi, documentStructuresApi, documentTypesApi, processAreasApi } from "@/lib/api";
+import {
+  queryKeys,
+  useCodingRule,
+  useDocumentStructures,
+  useDocumentTypes,
+  useProcessAreas,
+} from "@/lib/queries";
 
 /* ================================================================
    SOLINAL · CONTROL DOCUMENTAL
@@ -1024,11 +1030,38 @@ export default function ControlDocumental() {
   }, [documentTypesQuery.data]);
 
   /**
-   * "Guardar configuración" persists all three Control Documental catalogs
-   * to their backend tables (see backend/NOTES.md § 17): document types
-   * (`/document-types`), the coding rule (`/coding-rule`) and processes/areas
-   * (`/process-areas`). Each is re-hydrated on mount by the effects above,
-   * so a saved change survives leaving and re-opening this page.
+   * "Estructuras documentales" (`cfg.estructuras`) is backend-persisted via
+   * `/document-structures` — the per-type section outline that until now only
+   * lived in this component's state, so adding / renaming / reordering /
+   * unchecking a section was lost on reload. The server map is
+   * `{ [tipoSigla]: [{ titulo, activa }] }`; here it becomes the local
+   * `{ [tipoSigla]: [{ n, on }] }` shape. Loaded once so a background refetch
+   * (e.g. right after saving) never clobbers an edit in progress.
+   */
+  const documentStructuresQuery = useDocumentStructures();
+  const appliedServerEstructuras = useRef(false);
+  useEffect(() => {
+    const map = documentStructuresQuery.data;
+    if (!map || Object.keys(map).length === 0 || appliedServerEstructuras.current) return;
+    appliedServerEstructuras.current = true;
+    setCfg((c) => ({
+      ...c,
+      estructuras: Object.fromEntries(
+        Object.entries(map).map(([sigla, secs]) => [
+          sigla,
+          secs.map((s) => ({ n: s.titulo, on: s.activa })),
+        ]),
+      ),
+    }));
+  }, [documentStructuresQuery.data]);
+
+  /**
+   * "Guardar configuración" persists every Control Documental catalog to its
+   * backend table (see backend/NOTES.md § 17): document types
+   * (`/document-types`), the coding rule (`/coding-rule`), processes/areas
+   * (`/process-areas`) and the per-type section outlines
+   * (`/document-structures`). Each is re-hydrated on mount by the effects
+   * above, so a saved change survives leaving and re-opening this page.
    */
   async function handleGuardarConfiguracion() {
     setGuardando(true);
@@ -1066,6 +1099,17 @@ export default function ControlDocumental() {
         cfg.procesos.map((p, i) => ({ sigla: p.s, nombre: p.n, orden: i })),
       );
       await queryClient.invalidateQueries({ queryKey: queryKeys.processAreas });
+      // Persists "Estructuras documentales" server-side — the per-type section
+      // outline, so an admin's add/rename/reorder/uncheck survives reload.
+      await documentStructuresApi.save(
+        Object.fromEntries(
+          Object.entries(cfg.estructuras).map(([sigla, secs]) => [
+            sigla,
+            secs.map((s) => ({ titulo: s.n, activa: s.on })),
+          ]),
+        ),
+      );
+      await queryClient.invalidateQueries({ queryKey: queryKeys.documentStructures });
       flash("Configuración guardada y aplicada a la biblioteca documental.");
     } catch (err) {
       flash(err instanceof Error ? err.message : "No se pudo guardar la configuración.");

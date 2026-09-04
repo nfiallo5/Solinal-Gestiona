@@ -219,7 +219,7 @@ the `package.json#prisma.seed` config in favour of `prisma.config.ts` (the CLI
 already warns about it on every command). Upgrading is a separate, deliberate
 task — do not bump it as a side effect of adding a route.
 
-### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea`
+### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection`
 
 Both of Control Documental's "Tipos y codificación" catalogs are real
 backend tables now, read/written through routes, and both feed
@@ -239,10 +239,27 @@ backend tables now, read/written through routes, and both feed
   via `assertAreaExists`; `zAreaCode` is just a shape check now, not a
   fixed `z.enum`.
 
+Control Documental's **"Estructuras documentales"** tab is also
+backend-persisted now, but it does NOT feed `POST /documents` — it is an
+editor-only outline:
+
+- **`DocumentStructureSection`** (`/document-structures`, migration
+  `20260903225600`). The per-type recommended section list — the old
+  `cfg.estructuras` in `ControlDocumental.jsx`, which only lived in React
+  state and reset on reload. Flat rows (`tipoSigla`, `titulo`, `activa`,
+  `orden`), but the route's wire shape is the same per-type map the UI
+  uses: `{ "PRO": [{ titulo, activa }], … }`. `PUT` is replace-all
+  (`deleteMany` + `createMany` in one transaction), Administrador-only,
+  audited as `"Actualizó las estructuras documentales por tipo"`. No FK to
+  `DocumentTypeCatalog` — a renamed/removed type just stops appearing.
+  Nothing reads these outlines at document-creation time yet.
+
 Frontend: `useDocumentTypes()` / `useProcessAreas()` feed
 `CreateDocumentDialog`'s dropdowns and the Documentos type filter;
-`ControlDocumental.jsx` loads both on mount and persists them (with the
-coding rule) in "Guardar configuración". `docStyles.ts` badge colors
+`useDocumentStructures()` feeds only the Estructuras tab.
+`ControlDocumental.jsx` loads all four (types, areas, coding rule,
+structures) on mount via one-shot `appliedServer*` effects and persists
+them together in "Guardar configuración". `docStyles.ts` badge colors
 still key off the canonical 5 — `docTypeBadgeClass()` returns a neutral
 badge for any other catalog type.
 

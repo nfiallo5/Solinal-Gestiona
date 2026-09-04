@@ -15,6 +15,7 @@ import {
   codingRuleApi,
   configApi,
   documentsApi,
+  documentStructuresApi,
   documentTypesApi,
   getToken,
   processAreasApi,
@@ -39,6 +40,7 @@ export const queryKeys = {
   templates: ["templates"] as const,
   documentTypes: ["documentTypes"] as const,
   processAreas: ["processAreas"] as const,
+  documentStructures: ["documentStructures"] as const,
   codingRule: ["codingRule"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
@@ -108,6 +110,16 @@ export function useProcessAreas(enabled = true) {
   return useQuery({
     queryKey: queryKeys.processAreas,
     queryFn: () => processAreasApi.list(),
+    enabled,
+  });
+}
+
+/** Control Documental's "Estructuras documentales" tab — the recommended
+ * section outline saved per document type. */
+export function useDocumentStructures(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.documentStructures,
+    queryFn: () => documentStructuresApi.list(),
     enabled,
   });
 }

@@ -341,6 +341,40 @@ model ProcessArea {
   @@index([orden])
 }
 
+/// One recommended section of the outline Control Documental's "Estructuras
+/// documentales" tab keeps for a given document type — the backend-persisted
+/// form of `cfg.estructuras` in `frontend/src/routes/ControlDocumental.jsx`,
+/// which until now only lived in this component's local React state and was
+/// lost on reload.
+///
+/// A type's outline is the ordered set of rows sharing a `tipoSigla`, read
+/// `orderBy: { orden: 'asc' }`. `activa = false` keeps a section on record but
+/// unchecked, exactly like the checkbox in the UI. No FK to
+/// `DocumentTypeCatalog`: the route replaces the whole table on every save, so
+/// a renamed/removed type just stops appearing, and an admin can stage an
+/// outline for a `tipoSigla` before its catalog row exists.
+model DocumentStructureSection {
+  id Int @id @default(autoincrement())
+
+  /// `DocumentTypeCatalog.sigla` this section belongs to, e.g. "PRO".
+  tipoSigla String
+
+  /// Section heading as shown/edited in the outline, e.g. "Objetivo".
+  titulo String
+
+  /// Whether the section is checked (included when a document of this type is
+  /// generated). Unchecked sections are kept so the admin can re-enable them.
+  activa Boolean @default(true)
+
+  /// Position within this type's outline, 0-based.
+  orden Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tipoSigla, orden])
+}
+
 /// `AuditLogEntry` (seed.ts). Written ONLY by the server via
 /// `src/lib/audit.ts#writeAudit()` — never posted by the client.
 /// `user` and `role` are denormalized at write time on purpose: an audit row
