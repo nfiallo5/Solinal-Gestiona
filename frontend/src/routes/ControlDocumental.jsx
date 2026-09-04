@@ -1705,8 +1705,7 @@ export default function ControlDocumental() {
 
               <div className="card">
                 <h3>Identificación y descripción</h3>
-                <p className="hint">Lo mínimo que exige el numeral 7.5.2 a): título, código, fecha, autor o responsable, proceso y tipo documental.</p>
-                <div className="checks">
+								<div className="checks">
                   {[["titulo", "Título"], ["codigo", "Código"], ["version", "Versión o edición"], ["fechaElaboracion", "Fecha de elaboración"],
                   ["fechaRevision", "Fecha de última modificación"], ["fechaAprobacion", "Fecha de aprobación"], ["autor", "Autor"],
                   ["responsable", "Cargo responsable"], ["proceso", "Proceso"], ["tipoDoc", "Tipo documental"]].map(([k, l]) => (
