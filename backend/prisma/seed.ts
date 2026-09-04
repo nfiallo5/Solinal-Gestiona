@@ -617,6 +617,25 @@ async function main(): Promise<void> {
   });
   console.log('  footer config:    1');
 
+  // --- Document signature-flow config -------------------------------------
+  // Matches cfg.ctrl.participacionDueno + the Elaboró/Revisó/Aprobó table in
+  // ControlDocumental.jsx, so seeding this row changes nothing until an
+  // Administrador edits the "Flujo de firmas" card.
+  const seedSignatureFlowConfig = {
+    participacionDueno: true,
+    etapas: [
+      { etapa: 'Elaboró', rol: 'Dueño de proceso', obligatoria: true },
+      { etapa: 'Revisó', rol: 'Coordinador de calidad', obligatoria: true },
+      { etapa: 'Aprobó', rol: 'Alta dirección', obligatoria: true },
+    ],
+  };
+  await prisma.documentSignatureFlowConfig.upsert({
+    where: { id: 1 },
+    create: { id: 1, ...seedSignatureFlowConfig },
+    update: seedSignatureFlowConfig,
+  });
+  console.log('  signature flow:   1');
+
   // --- Regulation alert ---------------------------------------------------
   // Replaces the hardcoded consts in src/features/editor/aiEngine.ts.
   await prisma.regulationAlert.upsert({

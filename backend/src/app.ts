@@ -30,6 +30,7 @@ import { processAreasRouter } from './routes/processAreas.js';
 import { documentStructuresRouter } from './routes/documentStructures.js';
 import { documentHeaderRouter } from './routes/documentHeader.js';
 import { documentFooterRouter } from './routes/documentFooter.js';
+import { documentSignatureFlowRouter } from './routes/documentSignatureFlow.js';
 import { aiRouter } from './routes/ai.js';
 import { codingRuleRouter } from './routes/codingRule.js';
 
@@ -77,6 +78,7 @@ export function createApp(): Express {
   app.use('/document-structures', documentStructuresRouter);
   app.use('/document-header', documentHeaderRouter);
   app.use('/document-footer', documentFooterRouter);
+  app.use('/document-signature-flow', documentSignatureFlowRouter);
   app.use('/coding-rule', codingRuleRouter);
   // ===== END ROUTES ========================================================
 

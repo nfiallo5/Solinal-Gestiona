@@ -219,7 +219,7 @@ the `package.json#prisma.seed` config in favour of `prisma.config.ts` (the CLI
 already warns about it on every command). Upgrading is a separate, deliberate
 task — do not bump it as a side effect of adding a route.
 
-### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection` + `DocumentHeaderConfig` + `DocumentFooterConfig`
+### 17. Control Documental catalogs — `DocumentTypeCatalog` + `ProcessArea` + `DocumentStructureSection` + `DocumentHeaderConfig` + `DocumentFooterConfig` + `DocumentSignatureFlowConfig`
 
 Both of Control Documental's "Tipos y codificación" catalogs are real
 backend tables now, read/written through routes, and both feed
@@ -239,9 +239,10 @@ backend tables now, read/written through routes, and both feed
   via `assertAreaExists`; `zAreaCode` is just a shape check now, not a
   fixed `z.enum`.
 
-Control Documental's **"Estructuras documentales"**, **"Encabezado"** and
-**"Pie de página"** tabs are also backend-persisted now, but none feeds
-`POST /documents` — they are editor-only config:
+Control Documental's **"Estructuras documentales"**, **"Encabezado"**,
+**"Pie de página"** and **"Flujo de firmas"** tabs are also
+backend-persisted now, but none feeds `POST /documents` — they are
+editor-only config:
 
 - **`DocumentStructureSection`** (`/document-structures`, migration
   `20260903225600`). The per-type recommended section list — the old
@@ -280,15 +281,32 @@ Control Documental's **"Estructuras documentales"**, **"Encabezado"** and
   Administrador-only upsert, audited as `"Actualizó la plantilla de pie
   de página de documentos"`. The document editor still renders a fixed
   signature block — this table only backs the Control Documental preview.
+- **`DocumentSignatureFlowConfig`** (`/document-signature-flow`, migration
+  `20260904155912`). Singleton (`id = 1`): `participacionDueno` (ISO
+  9001:2015 5.1.3 — authoring requires the process owner) plus `etapas`, a
+  JSON array of exactly 3 `{ etapa, rol, obligatoria }` stages in fixed
+  order (Elaboró / Revisó / Aprobó — 7.5.2). `rol` is one of
+  `FLUJO_FIRMAS_ROLES` (`src/lib/signatureFlowConfig.ts`), an illustrative
+  role vocabulary local to this tab — **not** the real `RoleName` enum
+  (`Administrador`/`Elaborador`/`Revisor`/`Aprobador`/`Lector`) that
+  `requireAuth`/`requireAdmin` gate on. `PUT`'s zod schema is a
+  `z.tuple` of 3 `.strict()` stage objects plus a `.refine` pinning the
+  etapa order; Administrador-only, audited as `"Actualizó el flujo de
+  firmas de documentos"`. Before this, `participacionDueno` lived only in
+  local state and the `etapas` table was an uncontrolled
+  `<select defaultValue>` / `<input defaultChecked>` mock that never
+  persisted anything — `Editor.tsx` still doesn't gate who may sign
+  against `etapas`.
 
 Frontend: `useDocumentTypes()` / `useProcessAreas()` feed
 `CreateDocumentDialog`'s dropdowns and the Documentos type filter;
-`useDocumentStructures()` / `useDocumentHeader()` / `useDocumentFooter()`
-feed only their respective Control Documental tabs. `ControlDocumental.jsx`
-loads all six (types, areas, coding rule, structures, header, footer) on
-mount via one-shot `appliedServer*` effects and persists them together in
-"Guardar configuración". `docStyles.ts` badge colors still key off the
-canonical 5 — `docTypeBadgeClass()` returns a neutral badge for any other
+`useDocumentStructures()` / `useDocumentHeader()` / `useDocumentFooter()` /
+`useDocumentSignatureFlow()` feed only their respective Control Documental
+tabs. `ControlDocumental.jsx` loads all seven (types, areas, coding rule,
+structures, header, footer, signature flow) on mount via one-shot
+`appliedServer*` effects and persists them together in "Guardar
+configuración". `docStyles.ts` badge colors still key off the canonical 5
+— `docTypeBadgeClass()` returns a neutral badge for any other
 catalog type.
 
 Known limitation: `areaFromCode()` (the Área badge in `MetadataForm.tsx`)

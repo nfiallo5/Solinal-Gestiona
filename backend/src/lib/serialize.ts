@@ -36,6 +36,7 @@ import type {
   DocumentHeaderConfig,
   DocumentRevision,
   DocumentSignature,
+  DocumentSignatureFlowConfig,
   DocumentStructureSection,
   DocumentTemplate,
   DocumentTypeCatalog,
@@ -245,6 +246,20 @@ export interface DocumentFooterConfigDTO {
   mostrarFecha: boolean;
 }
 
+/** One stage of the "Flujo de firmas" review-and-approval chain. */
+export interface FlujoFirmasEtapaDTO {
+  etapa: string;
+  rol: string;
+  obligatoria: boolean;
+}
+
+/** Mirrors the Prisma `DocumentSignatureFlowConfig` singleton row — Control
+ * Documental's "Flujo de firmas" card, inside "Pie de página". */
+export interface DocumentSignatureFlowConfigDTO {
+  participacionDueno: boolean;
+  etapas: FlujoFirmasEtapaDTO[];
+}
+
 /** Mirrors the Prisma `CodingRule` singleton row — see documentCode.ts. */
 export interface CodingRuleDTO {
   tokens: string[];
@@ -450,6 +465,17 @@ export function serializeDocumentFooterConfig(
     impresion: f.impresion,
     mostrarCargo: f.mostrarCargo,
     mostrarFecha: f.mostrarFecha,
+  };
+}
+
+export function serializeDocumentSignatureFlowConfig(
+  s: DocumentSignatureFlowConfig,
+): DocumentSignatureFlowConfigDTO {
+  return {
+    participacionDueno: s.participacionDueno,
+    // Stored as JSONB; the route validates the shape on write, so a read is a
+    // plain cast.
+    etapas: s.etapas as unknown as FlujoFirmasEtapaDTO[],
   };
 }
 

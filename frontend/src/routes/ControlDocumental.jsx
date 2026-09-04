@@ -7,6 +7,7 @@ import {
   codingRuleApi,
   documentFooterApi,
   documentHeaderApi,
+  documentSignatureFlowApi,
   documentStructuresApi,
   documentTypesApi,
   processAreasApi,
@@ -16,6 +17,7 @@ import {
   useCodingRule,
   useDocumentFooter,
   useDocumentHeader,
+  useDocumentSignatureFlow,
   useDocumentStructures,
   useDocumentTypes,
   useProcessAreas,
@@ -639,6 +641,11 @@ const DEFAULT = {
     leyenda: "“COPIA NO CONTROLADA”: el departamento de Calidad no garantiza que esta impresión sea la última versión del documento.",
     qr: true, hash: false, impresion: true, mostrarCargo: true, mostrarFecha: true,
   },
+  flujoFirmas: [
+    { etapa: "Elaboró", rol: "Dueño de proceso", obligatoria: true },
+    { etapa: "Revisó", rol: "Coordinador de calidad", obligatoria: true },
+    { etapa: "Aprobó", rol: "Alta dirección", obligatoria: true },
+  ],
   cod: { tokens: ["TIPO", "PROCESO", "CORRELATIVO", "VERSION"], separador: "-", digitos: 3, prefijoVer: "V", formatoAnio: "26", unico: true, hereda: true },
   tipos: TIPOS_INI,
   procesos: PROCESOS_INI,
@@ -1109,14 +1116,39 @@ export default function ControlDocumental() {
   }, [documentFooterQuery.data]);
 
   /**
+   * "Flujo de firmas" (`cfg.ctrl.participacionDueno` + `cfg.flujoFirmas`) is
+   * backend-persisted via `/document-signature-flow` — whether authoring
+   * requires the process owner's participation, and the 3-stage
+   * Elaboró/Revisó/Aprobó chain with its role + obligatoriedad per stage.
+   * Before this, `participacionDueno` lived only in local state and the
+   * per-stage table was an uncontrolled mock that never saved anything at
+   * all. Loaded once so a background refetch never clobbers an edit in
+   * progress.
+   */
+  const documentSignatureFlowQuery = useDocumentSignatureFlow();
+  const appliedServerSignatureFlow = useRef(false);
+  useEffect(() => {
+    const flow = documentSignatureFlowQuery.data;
+    if (!flow || appliedServerSignatureFlow.current) return;
+    appliedServerSignatureFlow.current = true;
+    setCfg((c) => ({
+      ...c,
+      ctrl: { ...c.ctrl, participacionDueno: flow.participacionDueno },
+      flujoFirmas: flow.etapas,
+    }));
+  }, [documentSignatureFlowQuery.data]);
+
+  /**
    * "Guardar configuración" persists every Control Documental catalog to its
    * backend table (see backend/NOTES.md § 17): document types
    * (`/document-types`), the coding rule (`/coding-rule`), processes/areas
    * (`/process-areas`), the per-type section outlines
    * (`/document-structures`), the header template + fields
-   * (`/document-header`) and the footer template + content fields
-   * (`/document-footer`). Each is re-hydrated on mount by the effects above,
-   * so a saved change survives leaving and re-opening this page.
+   * (`/document-header`), the footer template + content fields
+   * (`/document-footer`) and the signature flow
+   * (`/document-signature-flow`). Each is re-hydrated on mount by the
+   * effects above, so a saved change survives leaving and re-opening this
+   * page.
    */
   async function handleGuardarConfiguracion() {
     setGuardando(true);
@@ -1189,6 +1221,14 @@ export default function ControlDocumental() {
         mostrarFecha: cfg.footer.mostrarFecha,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.documentFooter });
+      // Persists "Flujo de firmas" server-side — the participación-del-dueño
+      // switch and the Elaboró/Revisó/Aprobó chain, so the choice survives
+      // reload (nothing gates who may sign from it yet).
+      await documentSignatureFlowApi.save({
+        participacionDueno: cfg.ctrl.participacionDueno,
+        etapas: cfg.flujoFirmas,
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.documentSignatureFlow });
       flash("Configuración guardada y aplicada a la biblioteca documental.");
     } catch (err) {
       flash(err instanceof Error ? err.message : "No se pudo guardar la configuración.");
@@ -1358,6 +1398,11 @@ export default function ControlDocumental() {
     { id: "barra", n: "Barra legal", d: "Una línea con versión, vigencia, clasificación y página. Firma electrónica." },
     { id: "vigor", n: "Entrada en vigor", d: "Fecha de entrada en vigor + realizado / revisado y aprobado." },
   ];
+
+  /* Opciones del <select> "Rol que firma" en la tarjeta "Flujo de firmas".
+     Vocabulario propio de esta pestaña -- no son los roles reales de
+     autenticación (Administrador/Elaborador/Revisor/Aprobador/Lector). */
+  const FLUJO_FIRMAS_ROLES = ["Dueño de proceso", "Coordinador de calidad", "Alta dirección", "Administrador"];
 
   const setSecs = (v) => up(`estructuras.${tipoSel}`, v);
 
@@ -1870,11 +1915,15 @@ export default function ControlDocumental() {
                   <table className="data" style={{ minWidth: 420 }}>
                     <thead><tr><th>Etapa</th><th>Rol que firma</th><th>Obligatoria</th></tr></thead>
                     <tbody>
-                      {[["Elaboró", "Dueño de proceso"], ["Revisó", "Coordinador de calidad"], ["Aprobó", "Alta dirección"]].map(([e, r]) => (
-                        <tr key={e}>
-                          <td style={{ fontWeight: 600 }}>{e}</td>
-                          <td><select defaultValue={r}>{["Dueño de proceso", "Coordinador de calidad", "Alta dirección", "Administrador"].map((o) => <option key={o}>{o}</option>)}</select></td>
-                          <td><input type="checkbox" defaultChecked style={{ width: 16 }} /></td>
+                      {cfg.flujoFirmas.map((row, i) => (
+                        <tr key={row.etapa}>
+                          <td style={{ fontWeight: 600 }}>{row.etapa}</td>
+                          <td>
+                            <select value={row.rol} onChange={(e) => up(`flujoFirmas.${i}.rol`, e.target.value)}>
+                              {FLUJO_FIRMAS_ROLES.map((o) => <option key={o}>{o}</option>)}
+                            </select>
+                          </td>
+                          <td><input type="checkbox" checked={row.obligatoria} onChange={(e) => up(`flujoFirmas.${i}.obligatoria`, e.target.checked)} style={{ width: 16 }} /></td>
                         </tr>
                       ))}
                     </tbody>

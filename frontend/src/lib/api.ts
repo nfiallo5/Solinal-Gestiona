@@ -747,6 +747,37 @@ export const documentFooterApi = {
     request<DocumentFooterConfig>("/document-footer", { method: "PUT", body: config }),
 };
 
+/** One stage of the "Flujo de firmas" review-and-approval chain. */
+export interface FlujoFirmasEtapa {
+  etapa: string;
+  rol: string;
+  obligatoria: boolean;
+}
+
+/**
+ * Control Documental's "Flujo de firmas" card, inside "Pie de página" —
+ * whether authoring requires the process owner's participation, and the
+ * 3-stage review-and-approval chain (Elaboró / Revisó / Aprobó), each with a
+ * role and whether it's mandatory. Singleton, backend-persisted
+ * (`/document-signature-flow`) instead of living only in the page's React
+ * state (`participacionDueno`) or not persisting at all (the `etapas` table
+ * used to be an uncontrolled, unwired mock).
+ */
+export interface DocumentSignatureFlowConfig {
+  participacionDueno: boolean;
+  etapas: FlujoFirmasEtapa[];
+}
+
+export const documentSignatureFlowApi = {
+  get: () => request<DocumentSignatureFlowConfig>("/document-signature-flow"),
+  /** Administrador only (enforced server-side). */
+  save: (config: DocumentSignatureFlowConfig) =>
+    request<DocumentSignatureFlowConfig>("/document-signature-flow", {
+      method: "PUT",
+      body: config,
+    }),
+};
+
 /** One of the 6 segment kinds the "Regla de codificación" builder combines
  * — matches `CODING_TOKENS` in backend/src/lib/documentCode.ts. */
 export type CodingToken = "SIGLA" | "TIPO" | "PROCESO" | "CORRELATIVO" | "ANIO" | "VERSION";

@@ -17,6 +17,7 @@ import {
   documentFooterApi,
   documentHeaderApi,
   documentsApi,
+  documentSignatureFlowApi,
   documentStructuresApi,
   documentTypesApi,
   getToken,
@@ -45,6 +46,7 @@ export const queryKeys = {
   documentStructures: ["documentStructures"] as const,
   documentHeader: ["documentHeader"] as const,
   documentFooter: ["documentFooter"] as const,
+  documentSignatureFlow: ["documentSignatureFlow"] as const,
   codingRule: ["codingRule"] as const,
   users: ["users"] as const,
   config: ["config"] as const,
@@ -144,6 +146,16 @@ export function useDocumentFooter(enabled = true) {
   return useQuery({
     queryKey: queryKeys.documentFooter,
     queryFn: () => documentFooterApi.get(),
+    enabled,
+  });
+}
+
+/** Control Documental's "Flujo de firmas" card — the saved
+ * participación-del-dueño switch and the 3-stage review/approval chain. */
+export function useDocumentSignatureFlow(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.documentSignatureFlow,
+    queryFn: () => documentSignatureFlowApi.get(),
     enabled,
   });
 }

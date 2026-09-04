@@ -552,6 +552,38 @@ model DocumentFooterConfig {
   updatedAt DateTime @updatedAt
 }
 
+/// Singleton row (`id = 1`) backing Control Documental's "Flujo de firmas"
+/// card (inside the "Pie de página" tab) — the ISO 9001:2015 7.5.2 /
+/// 5.1.3-style review-and-approval chain: who drafts, who reviews, who
+/// approves, and whether each stage is mandatory before a document can be
+/// released. The old `cfg.ctrl.participacionDueno` + the hardcoded,
+/// unwired `<select defaultValue>` / `<input defaultChecked>` table in
+/// `ControlDocumental.jsx`, neither of which persisted.
+///
+/// Like `DocumentHeaderConfig` / `DocumentFooterConfig`, nothing consumes
+/// this at document-creation or signing time yet — `Editor.tsx` does not
+/// read `etapas` to gate who may sign. This table just makes an admin's
+/// saved choice survive.
+model DocumentSignatureFlowConfig {
+  id Int @id @default(1)
+
+  /// Whether authoring requires the process owner's participation (ISO
+  /// 9001:2015 5.1.3). Mirrors `cfg.ctrl.participacionDueno`, which also
+  /// feeds the "Responsabilidad de la creación..." row of the compliance
+  /// checklist.
+  participacionDueno Boolean @default(true)
+
+  /// Exactly 3 stages, in order: Elaboró, Revisó, Aprobó. Each one is
+  /// `{ etapa, rol, obligatoria }`, where `rol` is one of
+  /// `FLUJO_FIRMAS_ROLES` (src/lib/signatureFlowConfig.ts) — an
+  /// illustrative role vocabulary local to this Control Documental tab, NOT
+  /// the real `RoleName` enum `requireAuth`/`requireAdmin` use. Enforced by
+  /// the route's zod schema, not here.
+  etapas Json
+
+  updatedAt DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Auth / lockout
 // ---------------------------------------------------------------------------
